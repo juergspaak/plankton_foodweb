@@ -1,0 +1,3 @@
+[submodule "NFD_definitions"]
+	path = NFD_definitions
+	url = https://github.com/juergspaak/NFD_definitions.git

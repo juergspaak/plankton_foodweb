@@ -5,11 +5,16 @@ import numpy as np
 try:
     sim_data
 except NameError:
-    sim_data = pd.read_csv("First_simulation.csv")
+    sim_data = pd.read_csv("data/simulation_result31588.csv")
+    #sim_data = pd.read_csv("data/simulation_result_uniform_traits.csv")
     sim_data = sim_data[sim_data.prob_high==0]
+    sim_data = sim_data[sim_data.prob_1 != 0]
+    #sim_data = sim_data[sim_data.r_start >=10]
+print(sim_data.shape)
     
 fig = plt.figure(figsize = (9,9))
 ax_res = fig.add_subplot(2,2,1)
+ax_res.set_ylim([0.9,2])
 cases_r = ["NPL", "NP", "NL", "PL"]
 
 
@@ -19,7 +24,7 @@ ax_res.set_xticklabels(cases_r)
 
 ax_const = fig.add_subplot(2,2,2)
 cases_t = ["None", "mu", "c", "k"]
-
+ax_const.set_ylim([0.9,2])
 
 boxs_t = [sim_data[sim_data.const_traits == case].richness for case in cases_t]
 ax_const.boxplot(boxs_t, showmeans = True)
@@ -45,7 +50,13 @@ ax_comb.set_yticks(np.arange(len(cases_r)))
 ax_comb.set_yticklabels(cases_r)
 
 fig.savefig("Figure_const_traits.pdf")
+
+fig = plt.figure()
+r_start = sorted(set(sim_data.r_start))
+plt.plot(r_start, [np.mean(sim_data.richness[sim_data.r_start == r]) for
+                   r in r_start], 'o')
 ###############################################################################
+"""
 env_keys = ["I_in", "N", "P", "loss_rate", "zm"]
 sim_data2 = sim_data[(sim_data.const_traits == "None") &
                      (sim_data.lim_factors == "NPL")]
@@ -64,4 +75,4 @@ for j, key in enumerate(env_keys):
     ax[j].set_title(key)
     
 fig.tight_layout()
-fig.savefig("Figure_env_effects.pdf")
+fig.savefig("Figure_env_effects.pdf")"""

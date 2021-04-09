@@ -34,19 +34,19 @@ env = {"I_in": 100,
 
 def light_growth(N, t, env = env):
     # light limited growth at grtowth rate I_in
-    tot_abs = np.sum(N * t["k"], axis = -2, keepdims = True)
-    return t["mu_l"]/tot_abs*np.log((t["mu_l"]/t["alpha"] + env["I_in"])/
-            (t["mu_l"]/t["alpha"] + env["I_in"]*np.exp(-env["zm"]*tot_abs)))
+    tot_abs = np.sum(N * t["a"], axis = -2, keepdims = True)
+    return t["mu"]/tot_abs*np.log((t["k_l"] + env["I_in"])/
+            (t["k_l"] + env["I_in"]*np.exp(-env["zm"]*tot_abs)))
     
 def phosphor_growth(N, t, env = env):
     P = env["P"] - np.sum(N * t["c_p"], axis = -2, keepdims = True)
     P[P<0] = 0
-    return t["mu_p"]*P/(P + t["k_p"])
+    return t["mu"]*P/(P + t["k_p"])
 
 def nitrogen_growth(N, t, env = env):
     nit = env["N"] - np.sum(N * t["c_n"], axis = -2, keepdims = True)
     nit[nit<0] = 0
-    return t["mu_n"]*nit/(nit + t["k_n"])
+    return t["mu"]*nit/(nit + t["k_n"])
 
 limiting_growth = {"N": nitrogen_growth,
                   "P": phosphor_growth,
@@ -55,7 +55,7 @@ limiting_growth_keys = np.array(["N", "P", "L"])
 
 def phyto_growth(N, t, env = env, limiting_res = limiting_growth_keys):
     
-    N = N.reshape(t["mu_l"].shape)
+    N = N.reshape(t["mu"].shape)
     growth = np.empty(((len(limiting_res),  ) + N.shape))
     for i, key in enumerate(limiting_res):
         growth[i] = limiting_growth[key](N, t, env)
@@ -84,7 +84,7 @@ def evaluate_growth(N, t, env):
     
 
 traits = generate_phytoplankton(5, 1000)
-
+"""
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from scipy.integrate import odeint
@@ -111,23 +111,4 @@ if __name__ == "__main__":
     ax[1,1].plot(time, I_out[...,i])
     ax[1,1].set_title("I_out")
 
-    print(richness)
-
-
-"""    
-import pandas as pd
-
-a = pd.read_csv("Default Dataset.csv", sep = ";", index_col = False, header = None, decimal = ",",
-                )
-b = pd.read_csv("Default Dataset(1).csv", sep = ";", index_col = False, header = None, decimal = ",",
-                )
-c = pd.read_csv("Default Dataset(2).csv", sep = ";", index_col = False, header = None, decimal = ",",
-                )
-d = pd.read_csv("Default Dataset(3).csv", sep = ";", index_col = False, header = None, decimal = ",",
-                )
-    
-group = len(a) * ["A"] + len(b) * ["B"] + len(c) *["C"] + len(d) * ["D"]
-
-absorb = list(a[0]) + list(b[0]) + list( c[0]) + list( d[0])
-
-df = pd.DataFrame(data = {"k": absorb, "group": group})"""
+    print(richness)"""

@@ -5,16 +5,19 @@ from scipy.integrate import odeint
 
 from timeit import default_timer as timer
 import phyto_growth as pg
+from gaussian_traits import generate_phytoplankton_traits
 
-itera = 10000
+save = np.random.randint(int(1e5))
+
+itera = 1000
 lim_factors = np.random.choice(["NPL", "NP", "NL", "PL"], itera,
                                replace = True)
 const_traits = np.random.choice(["None", "mu", "k", "c"], itera,
                                 replace = True)
 constant_traits = {"None": [],
-                   "mu": ["mu_l", "mu_p", "mu_n"],
-                   "k": ["k_n", "k_p", "alpha"],
-                   "c": ["c_n", "c_p", "k"]}
+                   "mu": ["mu"],
+                   "k": ["k_n", "k_p", "k_l"],
+                   "c": ["c_n", "c_p", "a"]}
 
 P_supply = np.random.uniform(0,3, itera)
 N_supply = np.random.uniform(0,30, itera)
@@ -26,7 +29,8 @@ zm = np.random.uniform(1,10, itera)
 time = np.linspace(0,1000,1001)
 start = timer()
 
-r_start = np.random.randint(2,10, itera)
+r_start = np.random.randint(2,50, itera)
+r_start = np.random.randint(2,9, itera)
 n_com = np.full(itera, 10)
 
 df = pd.DataFrame({"lim_factors": lim_factors, "const_traits": const_traits,
@@ -43,14 +47,14 @@ for i in range(itera):
        "N": N_supply[i],
        "m": loss_rate[i],
        "zm": zm[i]}
-    traits = pg.generate_phytoplankton(*com_shape)
+    traits = generate_phytoplankton_traits(*com_shape)
     
     for trait in constant_traits[const_traits[i]]:
         traits[trait][:] = np.average(traits[trait], axis = 0)
     
     sol = odeint(lambda N, t: N*pg.phyto_growth(N, traits, env = env,
                            limiting_res = lim_factors[i]),
-                 np.full(traits["mu_l"].size, 1e7),
+                 np.full(traits["mu"].size, 1e7),
                  time)
     sol.shape = (-1, ) + com_shape
     rel_abund = sol[-1]/np.sum(sol[-1], axis = 0)
@@ -59,7 +63,7 @@ for i in range(itera):
         # run for longer time to reach exclusion
         sol = odeint(lambda N, t: N*pg.phyto_growth(N, traits, env = env,
                            limiting_res = lim_factors[i]),
-                 np.full(traits["mu_l"].size, 1e7),
+                 np.full(traits["mu"].size, 1e7),
                  10*time)
     sol.shape = (-1, ) + com_shape
     rel_abund = sol[-1]/np.sum(sol[-1], axis = 0)
@@ -68,6 +72,9 @@ for i in range(itera):
           sum(richness == 1), sum(richness == 2), sum(richness == 3),
           sum(richness>3)]
     
-    print(i, timer()-start, (timer()-start)/(i+1), (timer()-start)/(i+1)*(itera-i))
-    
-df.to_csv("simulation_result.csv", index = False)
+    print(i, r_start[i], np.average(richness),
+          timer()-start,
+          (timer()-start)/(i+1),
+          (timer()-start)/(i+1)*(itera-i))
+    if i % 100 == 99:
+        df[:i].to_csv("data/simulation_result{}.csv".format(save), index = False)

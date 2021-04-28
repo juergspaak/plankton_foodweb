@@ -1,5 +1,5 @@
 import numpy as np
-import generate_phytoplankton as gp
+import generate_plankton as gp
 
 """
 traits and their meaning
@@ -109,10 +109,6 @@ def plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
              - N_phyto*0.001)
              
     return np.append(dP_dt, dZ_dt)
-             
-    
-    
-    
 
 def evaluate_growth(N, t, env):
     phosphor = env["P"] - np.sum(N*t["c_p"], axis = -2)
@@ -131,8 +127,8 @@ def evaluate_growth(N, t, env):
     
     return phosphor, nitrogen, I_out, limiting_factor, growth, growth_all
 
-r_phyto = 5
-r_zoo = 10
+r_phyto = 2
+r_zoo = 2
 traits = gp.generate_plankton(r_phyto, r_zoo,10)
 t2 = {}
 for key in traits.keys():
@@ -144,8 +140,7 @@ N = np.array(r_phyto*[1e3] + r_zoo*[1])
 N_phyto = N[:r_phyto]
 
 grazed = grazing(N_phyto, t2)
-print(grazed)
-print(zoop_growth(grazed, t2))
+
 
 
 

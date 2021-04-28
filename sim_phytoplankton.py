@@ -5,7 +5,7 @@ from scipy.integrate import odeint
 
 from timeit import default_timer as timer
 import phyto_growth as pg
-from gaussian_traits import generate_phytoplankton_traits
+from phytoplankton_traits import generate_phytoplankton_traits
 
 save = np.random.randint(int(1e5))
 

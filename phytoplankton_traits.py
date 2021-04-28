@@ -17,14 +17,16 @@ phyto_data = pd.read_csv("Phytoplankton traits.csv")
 phyto_data = phyto_data[(phyto_data.temperature <= temp_range[1]) &
                         (phyto_data.temperature >= temp_range[0])]
 phyto_traits = phyto_data[["mu_p", "k_p_m", "vmax_p",
-                           "mu_nit", "k_nit_m", "vmax_nit", "volume"]].copy()
+                           "mu_nit", "k_nit_m", "vmax_nit", "volume",
+                           "qmax_p"]].copy()
 phyto_traits.columns = ["mu_p", # maximal phosphor growth rate [day^-1]
                 "k_p", # half saturation for phosphor growth rate [mumol L^-1]
                 "c_p", # phosphor consumption rate [mumol P cell^-1 day^-1]
                 "mu_n", # maximal nitrate growth rate [day^-1]
                 "k_n", # half saturation for nitrate growth rate [mumol L^-1]
                 "c_n", # nitrate uptake rate [mumol N cell^-1 day^-1]
-                "size"] # cell volume [\mum ^3]
+                "size_P", # cell colume [\mum ^3]
+                "R_P"] # phosphorus concentration [\mumol P cell^-1]
 
 # add an arbitrary mortality rate
 m = 0.01
@@ -94,10 +96,11 @@ mu_data = np.append(mu_data, light_data.mu_l)
 
 gaussians = gaussians.drop(["mu_n", "mu_p", "mu_l"], axis = 1)
 del raw_data["mu_n"], raw_data["mu_p"], raw_data["mu_l"]
-raw_data["mu"] = mu_data[np.isfinite(mu_data)]
+# phytoplankton growth rate
+raw_data["mu_P"] = mu_data[np.isfinite(mu_data)]
 
-gaussians["mu"] = (np.nanmean(raw_data["mu"]),
-                        np.nanvar(raw_data["mu"]))
+gaussians["mu_P"] = (np.nanmean(raw_data["mu_P"]),
+                        np.nanvar(raw_data["mu_P"]))
 
 
 
@@ -115,12 +118,13 @@ cor_mul_kl = np.cov(light_data.loc[ind, "mu_l"],
 
 #scaling factors for size, minimum value
 # data from doi:10.1093/plankt/fbp098, Finkel et al 2010
-gaussians = gaussians.append({"mu": -0.25, "k_p": 0.5, "k_n": 0.5,
+gaussians = gaussians.append({"mu_P": -0.25, "k_p": 0.5, "k_n": 0.5,
                               "c_n": 2/3, "c_p": 2/3,
-                              "a": 0.23, "size": 1,
-                              "k_l": cor_mul_kl*(-0.25)}, ignore_index = True)
+                              "a": 0.23, "size_P": 1,
+                              "k_l": cor_mul_kl*(-0.25),
+                              "R_P": 0.8}, ignore_index = True)
 # scaling factor_maximum value
-gaussians = gaussians.append({"mu": -0.25, "k_p": 0.5, "k_n": 0.5,
+gaussians = gaussians.append({"mu_P": -0.25, "k_p": 0.5, "k_n": 0.5,
                               "c_n": 2/3, "c_p": 2/3,
                               "a": 0.69,
                               "k_l": cor_mul_kl*(-0.25)}, ignore_index = True)
@@ -132,9 +136,9 @@ gaussians = gaussians.T
 gaussians.columns = ["mean_trait", "std_trait", "beta_min", "beta_max"]
 
 # size disribution mean and standarddeviation
-mean_size = np.nanmean(phyto_traits["size"])
+mean_size = np.nanmean(phyto_traits["size_P"])
 std_size = np.nanmin(np.abs(gaussians["std_trait"]/gaussians["beta_min"]))
-std_size = np.nanstd(raw_data["size"])
+std_size = np.nanstd(raw_data["size_P"])
 
 """
 # intercept of allometric scaling
@@ -147,24 +151,26 @@ gaussians["std_err"] = np.sqrt(-(gaussians.beta_min*std_size)**2 +
 
 ##############################################################################
 # fill in covariance matrix
-trait_names = np.array(["size", "mu", "k_p", "k_n", "k_l", "c_p", "c_n", "a"])
+trait_names = np.array(["size_P", "mu_P", "k_p", "k_n", "k_l", "c_p", "c_n", "a",
+                        "R_P"])
 cov_matrix = pd.DataFrame(np.zeros((len(trait_names), len(trait_names))),
                           index = trait_names, columns = trait_names)
-mu = np.empty(len(trait_names))
+mean_traits = np.empty(len(trait_names))
 
 for i,trait in enumerate(trait_names):
     row = gaussians.loc[trait,:]
     # mean values for all traits
-    mu[i] = gaussians.loc[trait, "mean_trait"]
+    mean_traits[i] = gaussians.loc[trait, "mean_trait"]
     # standard deviation for all traits
     cov_matrix.loc[trait, trait] = row.std_trait
     # allometric scaling
     for traitj in trait_names:
         if trait == traitj:
             continue
-        cov_matrix.loc[trait, traitj] = (gaussians.loc["size", "std_trait"]*
+        cov_matrix.loc[trait, traitj] = (gaussians.loc["size_P", "std_trait"]*
                                          gaussians.loc[trait, "beta_min"]
                                          *gaussians.loc[traitj, "beta_min"])
+
 
 # add certain tradeoffs
 A_tradeoff = pd.read_csv("Three_way_tradeoff.csv", index_col=0)
@@ -173,16 +179,27 @@ cov_tradeoff = cov_matrix.copy()
 for traiti in A_tradeoff.columns:
     for traitj in A_tradeoff.columns:
         cov_tradeoff.loc[traiti, traitj] = A_tradeoff.loc[traiti, traitj]
+    
+def generate_phytoplankton_traits(r_spec = 1, n_com = 100):
+    # generate multivariate distribution
+    traits = np.exp(np.random.multivariate_normal(mean_traits, cov_matrix,
+                                                  (n_com, r_spec)))
+    trait_dict = {}
+    for i, trait in enumerate(trait_names):
+        trait_dict[trait] = traits[...,i]
+    
+    return trait_dict
+    
 
-if __name__ == "__main__" and True:
-    traits = np.exp(np.random.multivariate_normal(mu, cov_matrix, 1000))
+if __name__ == "__main__":
+    traits = np.exp(np.random.multivariate_normal(mean_traits, cov_matrix, 1000))
     traits = pd.DataFrame(traits, columns = trait_names)
     
     fig, ax = plt.subplots(len(traits.keys()), len(traits.keys()),
                                figsize = (12,12), sharex = "col", sharey = "row")
     bins = 10
     for i,keyi in enumerate(trait_names):
-        ax[0,i].set_title(keyi)
+        ax[-1,i].set_xlabel(keyi)
         ax[i,0].set_ylabel(keyi)
         for j, keyj in enumerate(trait_names):               
             if i<j:
@@ -215,11 +232,11 @@ if __name__ == "__main__" and True:
         
         # add real data for maximal growth rate
         index = np.arange(len(trait_names))
-        ind_mu = index[trait_names == "mu"][0]
-        for mu in ["mu_n", "mu_p"]:
-            for t in ["k_p", "k_n", "c_n", "c_p", "size"]:
+        ind_mu = index[trait_names == "mu_P"][0]
+        for mu_res in ["mu_n", "mu_p"]:
+            for t in ["k_p", "k_n", "c_n", "c_p", "size_P"]:
                 ind_t = index[trait_names == t][0]
-                ax[ind_t, ind_mu].scatter(phyto_traits[mu], phyto_traits[t], 
+                ax[ind_t, ind_mu].scatter(phyto_traits[mu_res], phyto_traits[t], 
                                           s = 2)
                 
         ax[index[trait_names == "k_l"][0],ind_mu].scatter(light_data["mu_l"],

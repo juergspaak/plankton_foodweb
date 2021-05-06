@@ -1,23 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import gaussian_traits as gp
+import phytoplankton_traits as pt
 import pandas as pd
 
 # define gaussian covariance matrix and mean
-means = gp.gaussians.loc[["size", "k_n", "k_p", "mu"],
+means = pt.gaussians.loc[["size_P", "k_n", "k_p", "mu_P"],
                                      "mean_trait"]
 
 # contains the traits size, k_n, k_p and mu
 A = np.zeros((4,4))
-np.fill_diagonal(A, gp.gaussians.loc[["size", "k_n", "k_p", "mu"],
+np.fill_diagonal(A, pt.gaussians.loc[["size_P", "k_n", "k_p", "mu_P"],
                                      "std_trait"])
 
 # fill in allometric scaling
-A[1:,0] = A[0,0]*gp.gaussians.loc[["k_n", "k_p", "mu"], "beta_min"]
-A[0,1:] = A[0,0]*gp.gaussians.loc[["k_n", "k_p", "mu"], "beta_min"]
-A[[1,2],[2,1]] = A[0,0]*np.prod(gp.gaussians.loc[["k_n", "k_p"], "beta_min"])
-A[[1,3],[3,1]] = A[0,0]*np.prod(gp.gaussians.loc[["k_n", "mu"], "beta_min"])
-A[[2,3],[3,2]] = A[0,0]*np.prod(gp.gaussians.loc[["k_p", "mu"], "beta_min"])
+A[1:,0] = A[0,0]*pt.gaussians.loc[["k_n", "k_p", "mu_P"], "beta_min"]
+A[0,1:] = A[0,0]*pt.gaussians.loc[["k_n", "k_p", "mu_P"], "beta_min"]
+A[[1,2],[2,1]] = A[0,0]*np.prod(pt.gaussians.loc[["k_n", "k_p"], "beta_min"])
+A[[1,3],[3,1]] = A[0,0]*np.prod(pt.gaussians.loc[["k_n", "mu_P"], "beta_min"])
+A[[2,3],[3,2]] = A[0,0]*np.prod(pt.gaussians.loc[["k_p", "mu_P"], "beta_min"])
 itera = int(1e4)
 data = np.random.multivariate_normal(means, A, itera).T
 
@@ -58,8 +58,8 @@ A_tradeoff = A_all[best][0]
 data = np.random.multivariate_normal(means, A_tradeoff, int(1e4)).T
 data2 = np.random.multivariate_normal(means, A, int(1e4)).T
 
-A_tradeoff = pd.DataFrame(A_tradeoff, index = ["size", "k_n", "k_p", "mu"],
-                          columns = ["size", "k_n", "k_p", "mu"])
+A_tradeoff = pd.DataFrame(A_tradeoff, index = ["size_P", "k_n", "k_p", "mu_P"],
+                          columns = ["size_P", "k_n", "k_p", "mu_P"])
 
 A_tradeoff.to_csv("Three_way_tradeoff.csv", index = True)
 

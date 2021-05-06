@@ -103,10 +103,15 @@ gaussians["mu_P"] = (np.nanmean(raw_data["mu_P"]),
                         np.nanvar(raw_data["mu_P"]))
 
 
+# phytoplankton absorption coefficients
+augusti = pd.read_csv("augusti_data.csv")
+augusti = augusti[["d", "a"]]
+augusti["d"] = augusti["d"]**3 # convert diameter to volume
+augusti["a"] = augusti["a"]*1e-6 # convert \mum^2 to mm^2
+augusti = np.log(augusti)
 
-
-# add fictional data for absorption coeficcient, to be adjusted xxx
-gaussians["a"] = np.log(1e-7),  1  
+gaussians["a"] = (np.nanmean(augusti["a"]),
+                        np.nanvar(augusti["a"]))
 ##############################################################################
 # find parameters for scaling size to traits
 
@@ -120,34 +125,19 @@ cor_mul_kl = np.cov(light_data.loc[ind, "mu_l"],
 # data from doi:10.1093/plankt/fbp098, Finkel et al 2010
 gaussians = gaussians.append({"mu_P": -0.25, "k_p": 0.5, "k_n": 0.5,
                               "c_n": 2/3, "c_p": 2/3,
-                              "a": 0.23, "size_P": 1,
+                              "a": 0.77, "size_P": 1,
                               "k_l": cor_mul_kl*(-0.25),
                               "R_P": 0.8}, ignore_index = True)
-# scaling factor_maximum value
-gaussians = gaussians.append({"mu_P": -0.25, "k_p": 0.5, "k_n": 0.5,
-                              "c_n": 2/3, "c_p": 2/3,
-                              "a": 0.69,
-                              "k_l": cor_mul_kl*(-0.25)}, ignore_index = True)
-
 
 
 # add allometric scaling information
 gaussians = gaussians.T
-gaussians.columns = ["mean_trait", "std_trait", "beta_min", "beta_max"]
+gaussians.columns = ["mean_trait", "std_trait", "beta_min"]
 
 # size disribution mean and standarddeviation
 mean_size = np.nanmean(phyto_traits["size_P"])
 std_size = np.nanmin(np.abs(gaussians["std_trait"]/gaussians["beta_min"]))
 std_size = np.nanstd(raw_data["size_P"])
-
-"""
-# intercept of allometric scaling
-gaussians["alpha"] = gaussians.mean_trait - gaussians.beta_min*mean_size
-
-# random noise added to allometric scaling
-gaussians["std_err"] = np.sqrt(-(gaussians.beta_min*std_size)**2 +
-                               gaussians.std_trait**2)
-"""
 
 ##############################################################################
 # fill in covariance matrix

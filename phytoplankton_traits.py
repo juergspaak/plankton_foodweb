@@ -174,15 +174,18 @@ def generate_phytoplankton_traits(r_spec = 1, n_com = 100):
     # generate multivariate distribution
     traits = np.exp(np.random.multivariate_normal(mean_traits, cov_matrix,
                                                   (n_com, r_spec)))
+    # order species according to their size
+    order = np.argsort(traits[...,0], axis = 1)
     trait_dict = {}
     for i, trait in enumerate(trait_names):
-        trait_dict[trait] = traits[...,i]
+        trait_dict[trait] = traits[np.arange(n_com)[:,np.newaxis], order,i]
     
     return trait_dict
     
 
 if __name__ == "__main__":
-    traits = np.exp(np.random.multivariate_normal(mean_traits, cov_matrix, 1000))
+    traits = generate_phytoplankton_traits(10,100)
+    traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
     traits = pd.DataFrame(traits, columns = trait_names)
     
     fig, ax = plt.subplots(len(traits.keys()), len(traits.keys()),
@@ -194,8 +197,7 @@ if __name__ == "__main__":
         for j, keyj in enumerate(trait_names):               
             if i<j:
                 
-                ax[j,i].scatter(np.log(traits[keyi]),
-                                np.log(traits[keyj]), s = 1,
+                ax[j,i].scatter(traits[keyi], traits[keyj], s = 1,
                             alpha = 0.1, color = "lightblue")
                 try:
                     ax[j,i].scatter(phyto_traits[keyi], phyto_traits[keyj],
@@ -208,8 +210,7 @@ if __name__ == "__main__":
             ax_hist = fig.add_subplot(len(traits.keys()),
                                       len(traits.keys()),
                                       1 + i + i*len(traits.keys()))
-            ax_hist.hist(np.log(traits[keyi]),
-                         bins, density = True)
+            ax_hist.hist(traits[keyi], bins, density = True)
             ax_hist.set_xticklabels([])
             ax_hist.set_yticklabels([])
             ax_hist.hist(raw_data[keyi], bins, density = True,

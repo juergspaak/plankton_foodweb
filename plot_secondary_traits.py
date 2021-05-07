@@ -22,13 +22,14 @@ def scatter_plot(data, key1, key2, axc):
     axc.set_ylabel(key2)
 
 r_phyto = 1
-r_zoo = 1
+r_zoo = 3
 traits = gp.generate_plankton(r_phyto,100000)
-traits = gp.N_star_Z(traits)
+traits = gp.phytoplankton_equilibrium(traits)
+traits = gp.community_equilibrium(traits)
 traits["size_Z"] *= 1e6
-ind = ((traits["N_star_P"][:,0]>0)
-       & (traits["N_star_P_z"][:,0,0]>0)
-       & (traits["N_star_Z"][:,0,0]>0))
+ind = ((np.all(traits["N_star_P"]>0, axis = -1))
+       & np.all(traits["N_star_Z"]>0, axis = -1)
+       & np.all(traits["N_star_P_res"]>0, axis = -1))
 traits = {key: traits[key][ind] for key in traits.keys()}
 with warnings.catch_warnings(record = True):
     tf_simple = {key: np.log(traits[key].flatten()) for key in traits.keys()}
@@ -42,10 +43,20 @@ tf_zp = {key: tf_zp[key].flatten() for key in tf_zp.keys()}
 fig, ax = plt.subplots(3,2,figsize = (9,9), sharex = True, sharey = True)
 ax = ax.flatten()
 
-keys = ["N_star_P" + case for case in ["_n", "_p", "_l", "", "_z"]] + ["N_star_Z"]
+keys = ["N_star_P" + case for case in ["_n", "_p", "_l", "_res", ""]] + ["N_star_Z"]
 size = 5*["size_P"] + ["size_Z"]
 
 for i,key in enumerate(keys):
     scatter_plot(tf_simple, size[i], key, ax[i])
+    
+fig, ax = plt.subplots(2,1, figsize = (7,7))
+traits_all = gp.generate_plankton(r_phyto,100000)
+traits_all["size_Z"] *= 1e6
+traits_all = {key: np.log(traits_all[key].flatten()) for key in traits_all.keys()}
+bins = 30
+ax[0].hist(traits_all["size_P"], bins = bins, density = True)
+ax[0].hist(tf_simple["size_P"], bins = bins, density = True, alpha = 0.5)
+ax[1].hist(traits_all["size_Z"], bins = bins, density = True)
+ax[1].hist(tf_simple["size_Z"], bins = bins, density = True, alpha = 0.5)
 
 

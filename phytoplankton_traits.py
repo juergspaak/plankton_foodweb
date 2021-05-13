@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import norm
 import pandas as pd
 import warnings
 
@@ -50,7 +48,7 @@ with warnings.catch_warnings(record = True):
 #light traits
 light_data = pd.read_csv("Light_traits.csv")
 # only take species where model 1 was acceptable fit
-ind = light_data.AIC_1 > light_data.AIC_2 -10
+ind = light_data.AIC_1 > light_data.AIC_2 - 10
 light_data = light_data[ind]
 light_data["k_l"] = light_data.mu_l/light_data.alpha
 light_data = light_data[["mu_l",# maximum light growth rate [day^-1]
@@ -112,6 +110,7 @@ augusti = np.log(augusti)
 
 gaussians["a"] = (np.nanmean(augusti["a"]),
                         np.nanvar(augusti["a"]))
+raw_data["a"] = augusti["a"]
 ##############################################################################
 # find parameters for scaling size to traits
 
@@ -184,7 +183,9 @@ def generate_phytoplankton_traits(r_spec = 1, n_com = 100):
     
 
 if __name__ == "__main__":
-    traits = generate_phytoplankton_traits(10,100)
+    import matplotlib.pyplot as plt
+    
+    traits = generate_phytoplankton_traits(10,1000)
     traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
     traits = pd.DataFrame(traits, columns = trait_names)
     
@@ -198,10 +199,10 @@ if __name__ == "__main__":
             if i<j:
                 
                 ax[j,i].scatter(traits[keyi], traits[keyj], s = 1,
-                            alpha = 0.1, color = "lightblue")
+                            alpha = 0.1, color = "blue")
                 try:
                     ax[j,i].scatter(phyto_traits[keyi], phyto_traits[keyj],
-                                    s = 2)
+                                    s = 2, color = "orange")
                 except:
                     pass
         
@@ -210,11 +211,11 @@ if __name__ == "__main__":
             ax_hist = fig.add_subplot(len(traits.keys()),
                                       len(traits.keys()),
                                       1 + i + i*len(traits.keys()))
-            ax_hist.hist(traits[keyi], bins, density = True)
+            ax_hist.hist(traits[keyi], bins, density = True, color = "blue")
             ax_hist.set_xticklabels([])
             ax_hist.set_yticklabels([])
             ax_hist.hist(raw_data[keyi], bins, density = True,
-                         alpha = 0.5)
+                         alpha = 0.5, color = "orange")
             #ax_hist.set_xlim(ax[0,i].get_xlim())
             
         except KeyError:
@@ -227,10 +228,18 @@ if __name__ == "__main__":
         for mu_res in ["mu_n", "mu_p"]:
             for t in ["k_p", "k_n", "c_n", "c_p", "size_P"]:
                 ind_t = index[trait_names == t][0]
-                ax[ind_t, ind_mu].scatter(phyto_traits[mu_res], phyto_traits[t], 
-                                          s = 2)
+                if ind_t < ind_mu:
+                    ax[ind_mu, ind_t].scatter( phyto_traits[t],
+                                              phyto_traits[mu_res], 
+                                          s = 2, color = "orange")
+                else:
+                    ax[ind_t, ind_mu].scatter( phyto_traits[mu_res],
+                                              phyto_traits[t], 
+                                          s = 2, color = "orange")
                 
-        ax[index[trait_names == "k_l"][0],ind_mu].scatter(light_data["mu_l"],
+    ax[index[trait_names == "k_l"][0],ind_mu].scatter(light_data["mu_l"],
                                                           light_data["k_l"],
-                                                    s = 2)
+                                                    s = 2, color = "orange")
+    ax[index[trait_names == "a"][0], 0].scatter(augusti["d"], augusti["a"],
+                                                s = 2, color = "orange")
     fig.savefig("Figure_phytoplankton_traits.pdf")

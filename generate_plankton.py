@@ -5,6 +5,7 @@ import warnings
 import matplotlib.pyplot as plt
 
 import zoop_traits as zt
+uc = zt.uc
 import phytoplankton_traits as pt
 
 """
@@ -44,21 +45,16 @@ s_zp: seectivity/preference of eating phytoplankton p by zooplankton z [1]
 """
 
 # data taken from branco et al 2020, DOI: 10.1086/706251
-sig_size = np.sqrt(0.5)
+sig_size = np.sqrt(1.5)
 
 # mortality rate of zooplankton
-m_Z = 1/15 # assuming a life span of 30 days
+m_Z = 1/30 # assuming a life span of 30 days
 
 env = {"I_in": 100,
        "P": 50,
        "N": 250,
        "d": 0.1,
        "zm": 10}
-
-# unit conversions used
-uc = {"ml_L": 1000,
-      "h_day": 24 # hours in a day
-      }
 
 def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     """ Generate traits of plankton communities
@@ -99,7 +95,7 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     
     # add selectivity
     # differences in traits
-    size_diff = ((zt.mum3_mg + np.log(traits["size_P"][:,np.newaxis]))
+    size_diff = ((np.log(uc["mum3_mg"]*traits["size_P"][:,np.newaxis]))
                  - (np.log(traits["size_Z"])[...,np.newaxis]- zt.zoop_pref))**2
     traits["s_zp_raw"] = np.exp(-size_diff/2*sig_size**2)
     traits["s_zp"] = traits["s_zp_raw"]/np.sum(traits["s_zp_raw"], axis = -1,
@@ -117,6 +113,12 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     return traits
 
 def community_equilibrium(tr, env = env):
+    try:
+        if env["zm"].ndim == 1:
+            env = {key: np.expand_dims(env[key],-1) for key in env.keys()}
+    except AttributeError:
+        pass
+    
     c_Z = np.expand_dims(tr["c_Z"],-1)
     tr["A_zoop"] = c_Z*tr["s_zp"]*(-tr["h_zp"]*tr["m_Z"][...,np.newaxis] +
                 (tr["mu_Z"]/tr["alpha_Z"])[...,np.newaxis]*tr["R_P"][:,np.newaxis])
@@ -130,18 +132,18 @@ def community_equilibrium(tr, env = env):
     #####################
     # compute resource concentrations for nitrogen
     tr["N_conc_n"] = (env["d"]*env["N"]
-                    - uc["ml_L"]*np.sum(tr["N_star_P"]*tr["c_n"], axis = -1))
+                    - uc["ml_L"]*np.sum(tr["N_star_P"]*tr["c_n"], axis = -1,
+                                        keepdims=True))
     tr["N_conc_n"][tr["N_conc_n"]<0] = 0
     # compute resource concentrations for phosphorus    
     tr["N_conc_p"] = (env["d"]*env["P"]
-                    - uc["ml_L"]*np.sum(tr["N_star_P"]*tr["c_p"], axis = -1))
+                    - uc["ml_L"]*np.sum(tr["N_star_P"]*tr["c_p"], axis = -1,
+                                        keepdims=True))
     tr["N_conc_p"][tr["N_conc_p"]<0] = 0
     
     # outcoming light concentration
-    tr["tot_abs"] = env["zm"]*np.sum(tr["a"]*tr["N_star_P"], axis = -1)
-    
-    for key in ["N_conc_n", "N_conc_p", "tot_abs"]:
-        tr[key] = np.expand_dims(tr[key], axis = -1)
+    tr["tot_abs"] = env["zm"]*np.sum(tr["a"]*tr["N_star_P"], axis = -1,
+                                     keepdims=True)
     
     # given resource concentrations, compute growth rates
     tr["growth_p"] = tr["N_conc_p"]/(tr["k_p"] + tr["N_conc_p"])
@@ -165,13 +167,23 @@ def community_equilibrium(tr, env = env):
     tr["A_phyto"] = np.moveaxis(tr["A_phyto"], -2,-1) # transposing
     
     # compute zooplankton equilibrium density
-    tr["N_star_Z"] = np.linalg.solve(tr["A_phyto"], tr["growth_P"] - env["d"])
+    # identify well behaved matrices
+    ind = np.linalg.cond(tr["A_phyto"]) < 1e10
+    tr["N_star_Z"] = np.full(tr["mu_Z"].shape, np.nan)
+    tr["N_star_Z"][ind] = np.linalg.solve(tr["A_phyto"][ind],
+                                     (tr["growth_P"] - env["d"])[ind])
     tr["N_star_Z"][tr["N_star_Z"]<0] = np.nan
     
     return tr
 
 def phytoplankton_equilibrium(tr, env = env):
 
+    try:
+        if env["zm"].ndim == 1:
+            env = {key: np.expand_dims(env[key],-1) for key in env.keys()}
+    except AttributeError:
+        pass
+    
     # R_star values for resources
     tr["R_star_n"] = env["d"]*tr["k_n"]/(tr["mu_P"]-env["d"])
     tr["R_star_p"] = env["d"]*tr["k_p"]/(tr["mu_P"]-env["d"])
@@ -184,12 +196,17 @@ def phytoplankton_equilibrium(tr, env = env):
     
     # if limited by light
     # initial guess of outcoming light, all light is absorbed
-    I_out = 0
-    # find N_star iteratively
-    for i in range(10):
+    tr["I_out"] = 0
+    tr["N_star_P_l"] = np.empty(1)
+
+    # find N_star iteratively, converges fast for almost all communities
+    for i in range(20):
+        N_star = tr["N_star_P_l"].copy()
         tr["N_star_P_l"] = (tr["mu_P"]/(env["d"]*tr["a"]*env["zm"])
-                          *np.log((tr["k_l"]+env["I_in"])/(tr["k_l"]+ I_out)))
-        I_out = env["I_in"]*np.exp(-env["zm"]*tr["a"]*tr["N_star_P_l"])
+                          *np.log((tr["k_l"]+env["I_in"])/(tr["k_l"]+ tr["I_out"])))
+        tr["I_out"] = env["I_in"]*np.exp(-env["zm"]*tr["a"]*tr["N_star_P_l"])
+    
+    tr["N_star_P_l"][N_star<1] = np.nan
     
     
     tr["N_star_P_res"] = np.amin([tr["N_star_P_p"],
@@ -212,8 +229,8 @@ def N_star_Z_mono(tr, env = env):
     # compute zooplankton equilibrium densities
     
     try:
-        env["zm"].shape
-        env = {key: np.expand_dims(env[key],-1) for key in env.keys()}
+        if env["zm"].ndim == 1:
+            env = {key: np.expand_dims(env[key],-1) for key in env.keys()}
     except AttributeError:
         pass
     
@@ -253,14 +270,14 @@ def N_star_Z_mono(tr, env = env):
     return tr
     
 if __name__ == "__main__":
-    r_phyto, r_zoo, n_coms = [2, 2, 400]
-    traits = generate_plankton(r_phyto, n_coms)
+    r_phyto, r_zoo, n_coms = [5,5, 400]
+    traits = generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=False)
     traits = N_star_Z_mono(traits)
     traits = phytoplankton_equilibrium(traits)
     
     traits = community_equilibrium(traits)    
 
-if __name__ == "__main__" and False:
+if __name__ == "__main__":
 
     bins = np.linspace(0,20, 100)
     fig, ax = plt.subplots(2,1, figsize = (7,5))
@@ -287,7 +304,7 @@ if __name__ == "__main__" and False:
     plt.figure()
     plt.scatter(tf["size_P"], np.exp(tf["s_zp"]), s = 1)
     
-    fig, ax = plt.subplots(4,2, figsize = (9,9))
+    fig, ax = plt.subplots(3,2, figsize = (9,9))
     
     # handling time graph
     vmin, vmax = np.percentile(tf["h_zp"], [5,95])

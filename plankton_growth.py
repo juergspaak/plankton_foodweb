@@ -70,7 +70,7 @@ def phyto_growth(N, t, env = gp.env, limiting_res = limiting_growth_keys):
     # light growth might be nan if phyto densities are zero
     return np.nanmin(growth, axis = 0)
 
-def grazing(N_phyto,t, pr = False, h = h):
+def grazing(N_phyto,t, h = h):
     # how much zooplankton eat of each specific phytoplankton
     numerator = np.expand_dims(t["c_Z"],-1)*t["s_zp"]*N_phyto**h
     
@@ -79,7 +79,7 @@ def grazing(N_phyto,t, pr = False, h = h):
     return numerator/np.expand_dims(denom,-1)
 
 def plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
-    N[N<1e-3] = 1e-3
+    N[N<1e-5] = 1e-5
     # separate densities into phytoplankton and zooplankton
     N_phyto = N[...,:len(t["mu_P"])]
     N_zoo = N[...,len(t["mu_P"]):]
@@ -96,3 +96,54 @@ def plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
 def convert_ode_to_log(logN, t, env):
     N = np.exp(logN)
     return plankton_growth(N, t, env)/N
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    from scipy.integrate import solve_ivp
+    r_phyto = 1
+    r_zoo = 1
+    n_coms = int(1e4)
+    traits = gp.generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=True)
+    env = gp.generate_env(n_coms)
+    #env = {key: env[key][0,0] for key in env.keys()}
+    traits = gp.community_equilibrium(traits, env)
+    ind1 = np.isfinite(traits["N_star_P"]).all(axis = -1)
+    ind2 = np.isfinite(traits["N_star_Z"]).all(axis = -1)
+    ind = (np.isfinite(traits["N_star_P"]).all(axis = -1)
+           & np.isfinite(traits["N_star_Z"]).all(axis = -1))
+    traits = {key:traits[key][ind] for key in traits.keys()}
+    t2 = {}
+    i = np.random.randint(len(traits["mu_P"]))
+    for key in traits.keys():
+        t2[key] = traits[key][i]
+    env2 = {key: env[key][ind][i,0] for key in env.keys()}
+    N = np.append(t2["N_star_P"], t2["N_star_Z"])
+    
+    if np.amax(np.abs(plankton_growth(N, t2, env2)))>1e-8:
+        print(plankton_growth(N, t2, env2))
+        print(phyto_growth(N[:r_phyto], t2, env2), t2["growth_P"])
+        
+        print("nitrogen\n", nitrogen_growth(N[:r_phyto], t2, env2),
+              t2["growth_n"]*t2["mu_P"])
+        
+        print("phosphorus\n", phosphor_growth(N[:r_phyto], t2, env2),
+              t2["growth_p"]*t2["mu_P"])
+        
+        print("light\n", light_growth(N[:r_phyto], t2, env2),
+              t2["growth_l"]*t2["mu_P"])
+        raise
+    
+    # add environmental noise
+    N = N*np.random.uniform(1-1e-3,1+1e-3,N.shape)
+       
+    
+    time = [0,1000]
+    
+    fig, ax = plt.subplots(2, sharex = True)
+    
+    
+    sol = solve_ivp(lambda t, logN: convert_ode_to_log(logN, t2, gp.env),
+                         time, np.log(N), method = "LSODA")   
+    
+    ax[0].semilogy(sol.t, np.exp(sol.y[:r_phyto]).T, '--')
+    ax[1].semilogy(sol.t, np.exp(sol.y[r_phyto:]).T, '--')

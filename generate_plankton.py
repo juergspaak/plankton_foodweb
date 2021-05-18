@@ -48,13 +48,22 @@ s_zp: seectivity/preference of eating phytoplankton p by zooplankton z [1]
 sig_size = np.sqrt(1.5)
 
 # mortality rate of zooplankton
-m_Z = 1/30 # assuming a life span of 30 days
+m_Z = 1/15 # assuming a life span of 30 days
 
 env = {"I_in": 100,
        "P": 50,
        "N": 250,
        "d": 0.1,
        "zm": 10}
+
+def generate_env(n_coms, I_in = [50,200], P= [5,20], N = [50,100],
+                 d = [0.01,0.2], zm = [1,100]):
+    env = {"I_in": np.random.uniform(*I_in, (n_coms,1)),
+                   "P": np.random.uniform(*P, (n_coms, 1)),
+                   "N": np.random.uniform(*N, (n_coms,1)),
+                   "d": np.random.uniform(*d, (n_coms,1)),
+                   "zm": np.random.uniform(*zm, (n_coms,1))}
+    return env
 
 def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     """ Generate traits of plankton communities
@@ -105,12 +114,15 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     traits["m_Z"] = np.full(traits["mu_Z"].shape, m_Z)
     
     # rescaling of zooplankton growth rate to have maximum growth rates
-    traits["alpha_Z"] = (np.einsum("nz,nzp,np->nz", traits["c_Z"],
+    traits["alpha_Z"] = recompute_alpha(traits)
+
+    return traits
+
+def recompute_alpha(traits):
+    return (np.einsum("nz,nzp,np->nz", traits["c_Z"],
                                    traits["s_zp"], traits["R_P"])/
                     np.einsum("nz,nzp,nzp->nz", traits["c_Z"], traits["h_zp"],
                               traits["s_zp"]))
-
-    return traits
 
 def community_equilibrium(tr, env = env):
     try:
@@ -154,6 +166,9 @@ def community_equilibrium(tr, env = env):
     
     # compute growth rate of phytoplankton
     tr["growth_P"] = tr["mu_P"]*np.amin([tr["growth_p"],
+                                         tr["growth_n"],
+                                         tr["growth_l"]], axis = 0)
+    tr["limit_res"] = np.argmin([tr["growth_p"],
                                          tr["growth_n"],
                                          tr["growth_l"]], axis = 0)
     

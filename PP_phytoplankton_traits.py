@@ -22,15 +22,17 @@ traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
 
 itera = int(1e4)
 ax_size = fig.add_subplot(331)
-ax_size.hist(traits["size_P"], bins = bins, density=True, label = "simulation",
-             color = col_full)
-ax_size.hist(pt.raw_data["size_P"], density = True, alpha = 0.5,
+
+ax_size.hist(pt.raw_data["size_P"], density = True, alpha = 1,
              label = "empirical", color = col_emp)
 ax_size.set_xlabel("log(volume)")
 ax_size.set_ylabel("frequency")
 ax_size.legend(fontsize = 8)
 plot()
 
+ax_size.hist(traits["size_P"], bins = bins, density=True, label = "simulation",
+             color = col_full, alpha = 0.5)
+plot()
 
 ax_size_t1 = fig.add_subplot(334)
 t1 = "k_p"

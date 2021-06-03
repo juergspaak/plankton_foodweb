@@ -72,21 +72,22 @@ def phyto_growth(N, t, env = gp.env, limiting_res = limiting_growth_keys):
 
 def grazing(N_phyto,t, h = h):
     # how much zooplankton eat of each specific phytoplankton
-    numerator = np.expand_dims(t["c_Z"],-1)*t["s_zp"]*N_phyto**h
+    numerator = np.expand_dims(t["c_Z"],-1)*t["s_zp"]*np.expand_dims(N_phyto,-2)**h
     
-    denom = 1 + t["c_Z"]*np.einsum("zp,zp,...p->...z",t["h_zp"],t["s_zp"],
-                                   N_phyto**h)
+    denom = 1 + t["c_Z"]*np.einsum("...zp,...zp,...p->...z",
+                                   t["h_zp"], t["s_zp"], N_phyto**h)
     return numerator/np.expand_dims(denom,-1)
 
-def plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
-    N[N<1e-5] = 1e-5
-    # separate densities into phytoplankton and zooplankton
-    N_phyto = N[...,:len(t["mu_P"])]
-    N_zoo = N[...,len(t["mu_P"]):]
-    grazed = grazing(N_phyto,t)
+def plankton_growth(N, t, env, limiting_res = limiting_growth_keys, h = h):
+    N = N.copy()
     
-    dZ_dt = N_zoo*(t["mu_Z"]/t["alpha_Z"]*np.sum(t["R_P"]*grazed, axis = -1)
-                   - t["m_Z"])
+    # separate densities into phytoplankton and zooplankton
+    N_phyto = N[...,:t["r_phyto"]]
+    N_zoo = N[...,t["r_phyto"]:]
+    grazed = grazing(N_phyto,t, h)
+    
+    dZ_dt = N_zoo*(t["mu_Z"]/t["alpha_Z"]
+                   *np.einsum("...p,...zp->...z",t["R_P"],grazed) - t["m_Z"])
     dP_dt = (N_phyto*phyto_growth(N_phyto, t, env, limiting_res)
              - gp.uc["h_day"]/gp.uc["ml_L"]*np.einsum("...z,...zp->...p", N_zoo, grazed)
              - N_phyto*env["d"])
@@ -95,6 +96,7 @@ def plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
 
 def convert_ode_to_log(logN, t, env):
     N = np.exp(logN)
+    N[N<1e-5] = 1e-5
     return plankton_growth(N, t, env)/N
 
 if __name__ == "__main__":

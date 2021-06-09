@@ -16,15 +16,19 @@ phyto_data = phyto_data[(phyto_data.temperature <= temp_range[1]) &
                         (phyto_data.temperature >= temp_range[0])]
 phyto_traits = phyto_data[["mu_p", "k_p_m", "vmax_p",
                            "mu_nit", "k_nit_m", "vmax_nit", "volume",
-                           "qmax_p"]].copy()
+                           "qmin_nit"]].copy()
 phyto_traits.columns = ["mu_p", # maximal phosphor growth rate [day^-1]
                 "k_p", # half saturation for phosphor growth rate [mumol L^-1]
                 "c_p", # phosphor consumption rate [mumol P cell^-1 day^-1]
                 "mu_n", # maximal nitrate growth rate [day^-1]
                 "k_n", # half saturation for nitrate growth rate [mumol L^-1]
                 "c_n", # nitrate uptake rate [mumol N cell^-1 day^-1]
-                "size_P", # cell colume [\mum ^3]
-                "R_P"] # phosphorus concentration [\mumol P cell^-1]
+                "size_P", # cell volume [\mum ^3]
+                "R_P"] # nitrogen concentration [\mumol N cell^-1]
+
+# change q_min to mean resource concentration
+# xxx change
+phyto_traits["R_P"] = phyto_traits["R_P"]*10
 
 # add an arbitrary mortality rate
 m = 0.01
@@ -185,7 +189,7 @@ def generate_phytoplankton_traits(r_spec = 1, n_com = 100):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     
-    traits = generate_phytoplankton_traits(10,1000)
+    traits = generate_phytoplankton_traits(10,100)
     traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
     traits = pd.DataFrame(traits, columns = trait_names)
     
@@ -220,6 +224,7 @@ if __name__ == "__main__":
             
         except KeyError:
             pass
+        ax[-1,-1].set_xlim(ax[-1,0].get_ylim())
         
         
         # add real data for maximal growth rate

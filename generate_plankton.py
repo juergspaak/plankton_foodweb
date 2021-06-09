@@ -21,27 +21,28 @@ zm: depth of epilimnion [m]
 
 
 # Phytoplantkon specific traits
-size_P: Biovolume [\mum^3]
+size_P: Biovolume [\mum^3 cell^-1]
 mu_P: maximal growth rate of phytoplankton [day ^-1]
 k_p: Halfsaturation constant wrt. phosphorus, [\mumol P L^-1]
 k_n: Halfsaturation constant wrt. nitrogen, [\mumol N L^-1]
 k_l: Halfsaturation constant wrt. Light [\mumol quanta m^-2 s^-1]
-c_p: maximum uptake rate of phosphorus [µmol P cell^-1 day^-1]
-c_n: maximum uptake rate, [µmol N cell^-1 day^-1]
-a: absorption coefficient of light, [xxx]
+c_p: maximum uptake rate of phosphorus [\mumol P cell^-1 day^-1]
+c_n: maximum uptake rate, [\mumol N cell^-1 day^-1]
+a: absorption coefficient of light, [mm^2 cell^{-1}]
 m: mortality rate/dilution rate [day^-1]
-N_P: phytoplankton density [cell \mul ^-1]
+N_P: phytoplankton density [cell \ml ^-1]
 R_P: nutrient contents [mumol R cell^-1],
 
 Zooplankton traits
-size_Z: Zooplankton size [mg]
+size_Z: Zooplankton size [mg ind^-1]
 c_Z: clearance rate [ml h^-1 mg^-1]
 N_Z: zooplankton density [mg L^-1]
 mu_Z: maximum specific growth rate of Zooplankton [day^-1]
 m_Z: mortality rate of zooplankton
+k_Z: halfsaturation constant [mumol R mg C h^-1]
 
 Joint variables
-h_zp: handling time of phytoplankton by zoop, [h/cell]
+h_zp: handling time of phytoplankton by zoop, [h cell^-1 mg^-1]
 s_zp: seectivity/preference of eating phytoplankton p by zooplankton z [1]
 """
 
@@ -50,7 +51,7 @@ s_zp: seectivity/preference of eating phytoplankton p by zooplankton z [1]
 sig_size = np.sqrt(.5)
 
 # mortality rate of zooplankton
-m_Z = 1/15 # assuming a life span of 30 days
+m_Z = 0.1 # assuming a life span of 30 days
 
 env = {"I_in": 100,
        "P": 50,
@@ -101,9 +102,11 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     traits["h_zp"] = (-0.25*np.log(traits["size_Z"][...,np.newaxis])
                             + 0.34*np.log(traits["size_P"][:,np.newaxis]))
     
+    #traits["h_zp"] = (-2.11/3*np.log(traits["size_Z"][...,np.newaxis])
+    #                        + 1*np.log(traits["size_P"][:,np.newaxis]))
     # average handling time should be 0.005/day, change to hours
     # data from branco 2020
-    traits["h_zp"] = np.exp(np.log(0.0005*24)
+    traits["h_zp"] = np.exp(np.log(0.005*24)
                             + traits["h_zp"] - np.mean(traits["h_zp"]))
     
     # add selectivity
@@ -116,15 +119,8 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
 
     # mortality rate of zooplankton
     traits["m_Z"] = np.full(traits["mu_Z"].shape, m_Z)
-    
-    # rescaling of zooplankton growth rate to have maximum growth rates
-    traits["alpha_Z"] = recompute_alpha(traits)
 
     return traits
-
-def recompute_alpha(traits):
-    return (np.einsum("nzp,np->nz", traits["s_zp"], traits["R_P"])/
-                    np.einsum("nzp,nzp->nz",  traits["h_zp"], traits["s_zp"]))
 
 def community_equilibrium(tr, env = env):
     try:
@@ -133,13 +129,17 @@ def community_equilibrium(tr, env = env):
     except AttributeError:
         pass
     
+    # equilibrium resource intake by zooplankton
+    tr["R_star_Z"] = tr["k_Z"]*tr["m_Z"]/(tr["mu_Z"]-tr["m_Z"])
+    
     c_Z = np.expand_dims(tr["c_Z"],-1)
-    tr["A_zoop"] = c_Z*tr["s_zp"]*(-tr["h_zp"]*tr["m_Z"][...,np.newaxis] +
-                (tr["mu_Z"]/tr["alpha_Z"])[...,np.newaxis]*tr["R_P"][:,np.newaxis])
+    tr["A_zoop"] = c_Z*tr["s_zp"]*(-tr["h_zp"]*tr["R_star_Z"][...,np.newaxis]
+                                   + tr["R_P"][:,np.newaxis])
     
     # equilibrium density of phytoplankton species
-    tr["N_star_P"] = np.linalg.solve(tr["A_zoop"], tr["m_Z"])
-    tr["N_star_P"][tr["N_star_P"]<0] = np.nan
+    tr["N_star_P"] = np.linalg.solve(tr["A_zoop"], tr["R_star_Z"])
+    
+    #tr["N_star_P"][tr["N_star_P"]<0] = np.nan
    
     #####################
     # compute growth rates of phytoplankton
@@ -189,77 +189,8 @@ def community_equilibrium(tr, env = env):
     tr["N_star_Z"] = np.full(tr["mu_Z"].shape, np.nan)
     tr["N_star_Z"][ind] = np.linalg.solve(tr["A_phyto"][ind],
                                      (tr["growth_P"] - env["d"])[ind])
-    tr["N_star_Z"][tr["N_star_Z"]<0] = np.nan
+    #tr["N_star_Z"][tr["N_star_Z"]<0] = np.nan
     
-    return tr
-
-def community_equilibrium_hol3(tr, env = env):
-    try:
-        if env["zm"].ndim == 1:
-            env = {key: np.expand_dims(env[key],-1) for key in env.keys()}
-    except AttributeError:
-        pass
-    
-    c_Z = np.expand_dims(tr["c_Z"],-1)
-    tr["A_zoop"] = c_Z*tr["s_zp"]*(-tr["h_zp"]*tr["m_Z"][...,np.newaxis] +
-                (tr["mu_Z"]/tr["alpha_Z"])[...,np.newaxis]*tr["R_P"][:,np.newaxis])
-    
-    # equilibrium density of phytoplankton species
-    tr["N_star_P"] = np.sqrt(np.linalg.solve(tr["A_zoop"], tr["m_Z"]))
-    tr["N_star_P"][tr["N_star_P"]<0] = np.nan
-   
-    #####################
-    # compute growth rates of phytoplankton
-    #####################
-    # compute resource concentrations for nitrogen
-    start = timer()
-    tr["N_conc_n"] = (env["d"]*env["N"]
-                    - uc["ml_L"]*np.sum(tr["N_star_P"]*tr["c_n"], axis = -1,
-                                        keepdims=True))
-    tr["N_conc_n"][tr["N_conc_n"]<0] = 0
-    # compute resource concentrations for phosphorus    
-    tr["N_conc_p"] = (env["d"]*env["P"]
-                    - uc["ml_L"]*np.sum(tr["N_star_P"]*tr["c_p"], axis = -1,
-                                        keepdims=True))
-    tr["N_conc_p"][tr["N_conc_p"]<0] = 0
-    
-    # outcoming light concentration
-    tr["tot_abs"] = env["zm"]*np.sum(tr["a"]*tr["N_star_P"], axis = -1,
-                                     keepdims=True)
-    
-    # given resource concentrations, compute growth rates
-    tr["growth_p"] = tr["N_conc_p"]/(tr["k_p"] + tr["N_conc_p"])
-    tr["growth_n"] = tr["N_conc_n"]/(tr["k_n"] + tr["N_conc_n"])
-    tr["growth_l"] = (1/tr["tot_abs"]
-                    *np.log((tr["k_l"] + env["I_in"])/
-                            (tr["k_l"] + env["I_in"]*np.exp(-tr["tot_abs"]))))
-    
-    # compute growth rate of phytoplankton
-    tr["growth_P"] = tr["mu_P"]*np.amin([tr["growth_p"],
-                                         tr["growth_n"],
-                                         tr["growth_l"]], axis = 0)
-    tr["limit_res"] = np.argmin([tr["growth_p"],
-                                         tr["growth_n"],
-                                         tr["growth_l"]], axis = 0)
-    
-    
-    numerator = uc["h_day"]/uc["ml_L"]*c_Z*tr["s_zp"]*tr["N_star_P"][:,np.newaxis]
-    denom = 1 + tr["c_Z"]*np.einsum("...zp,...zp,...p->...z",
-                                    tr["h_zp"],tr["s_zp"],tr["N_star_P"]**2)
-
-    
-    tr["A_phyto"] = numerator/denom[...,np.newaxis]
-    tr["A_phyto"] = np.moveaxis(tr["A_phyto"], -2,-1) # transposing
-    
-    # compute zooplankton equilibrium density
-    # identify well behaved matrices
-    ind = np.linalg.cond(tr["A_phyto"]) < 1e10
-    tr["N_star_Z"] = np.full(tr["mu_Z"].shape, np.nan)
-    tr["N_star_Z"][ind] = np.linalg.solve(tr["A_phyto"][ind],
-                                     (tr["growth_P"] - env["d"])[ind])
-    tr["N_star_Z"][tr["N_star_Z"]<0] = np.nan
-    
-    print("time", timer()-start)
     return tr
 
 def phytoplankton_equilibrium(tr, env = env):
@@ -301,81 +232,45 @@ def phytoplankton_equilibrium(tr, env = env):
    
     return tr
 
-def N_star_Z_mono(tr, env = env):    
-
-    # zooplankton secondary traits competing for only one phytoplankton
-    # halfsaturation constant of zooplankton competing for one phytoplankton
-    tr["k_zp"] = 1/(tr["c_Z"][...,np.newaxis]*tr["h_zp"]*tr["s_zp"])
-    
-    # compute equilibrium densities of phytoplankton regulated by zooplankton
-    tr["N_star_P_z_mono"] = (tr["k_zp"]*(tr["m_Z"]/
-                                   (tr["mu_Z"]-tr["m_Z"]))[...,np.newaxis])
-    tr["N_star_P_z_mono"][tr["N_star_P_z_mono"]<0] = np.nan
-    
-    # compute zooplankton equilibrium densities
-    
-    try:
-        if env["zm"].ndim == 1:
-            env = {key: np.expand_dims(env[key],-1) for key in env.keys()}
-    except AttributeError:
-        pass
-    
-    # nitrogen concentration
-    tr["N_conc_n"] = (env["d"]*env["N"]
-                    - uc["ml_L"]*tr["N_star_P_z_mono"]*tr["c_n"][:,np.newaxis])
-    tr["N_conc_n"][tr["N_conc_n"]<0] = 0
-    # compute resource concentrations for phytoplankton    
-    tr["N_conc_p"] = (env["d"]*env["P"]
-                    - uc["ml_L"]*tr["N_star_P_z_mono"]*tr["c_p"][:,np.newaxis])
-    tr["N_conc_p"][tr["N_conc_p"]<0] = 0
-    
-    # outcoming light concentration
-    tr["I_out"] = env["I_in"]*np.exp(
-            -env["zm"]*tr["a"][:,np.newaxis]*tr["N_star_P_z_mono"]) 
-    
-    # compute relative growth rates of phytoplankton for each resource
-    tr["growth_p"] = tr["N_conc_p"]/(tr["k_p"][:,np.newaxis] + tr["N_conc_p"])
-    tr["growth_n"] = tr["N_conc_n"]/(tr["k_n"][:,np.newaxis] + tr["N_conc_n"])
-    tr["growth_l"] = (1/(env["zm"]*tr["N_star_P_z_mono"]*tr["a"][:,np.newaxis])
-                    *np.log((tr["k_l"][:,np.newaxis] + env["I_in"])/
-                            (tr["k_l"][:,np.newaxis] + tr["I_out"])))
-    
-    # compute growth rate of phytoplankton
-    tr["growth_P"] = tr["mu_P"][:,np.newaxis]*np.amin([tr["growth_p"],
-                                                       tr["growth_n"],
-                              tr["growth_l"]], axis = 0)
-    
-    numerator = tr["c_Z"][...,np.newaxis]*tr["s_zp"]
-    denom = 1 + tr["c_Z"][...,np.newaxis]*tr["h_zp"]*tr["s_zp"]*tr["N_star_P_z_mono"]
-    tr["grazing_star"] = numerator/denom
-    
-    # compute zooplankton equilibrium density
-    tr["N_star_Z_mono"] = ((tr["growth_P"]-env["d"])
-                      /(uc["h_day"]/uc["ml_L"]*tr["grazing_star"]))
-    
-    return tr
-    
-if __name__ == "__main__":
-    r_phyto, r_zoo, n_coms = [5,5, 400]
-    traits = generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=False)
-    traits = N_star_Z_mono(traits)
-    traits = phytoplankton_equilibrium(traits)
-    
-    traits = community_equilibrium(traits)    
+def select(traits):
+    sel_keys = list(traits.keys())
+    sel_keys.remove("r_phyto")
+    sel_keys.remove("r_zoo")
+    sel_keys.remove("n_coms")
+    return sel_keys
 
 if __name__ == "__main__":
+    r_phyto, r_zoo, n_coms = [2,1, int(1e4)]
+    traits = generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=True)
+    env = generate_env(n_coms)
+    #traits = phytoplankton_equilibrium(traits, env)
+    
+    traits = community_equilibrium(traits, env)    
 
+    import plankton_growth as pg
+    
+    ind = ((traits["N_star_P"] > 0).all(axis = -1) &
+           (traits["N_star_Z"] > 0).all(axis = -1))
+    
+    print(sum(ind))
+    print("R_star_Z", np.nanpercentile(np.log(traits["R_star_Z"]), [5, 50, 95]))
+    print("R_P", np.nanpercentile(np.log(traits["R_P"][:,np.newaxis]/traits["h_zp"]), [5, 50, 95]))
+    
+    plankton_growth(np.append(traits["N_star_P"], traits["N_star_Z"], axis = 1),traits,
+                    env)[ind][:5]
+    
+if __name__ == "__main__" and False:
+    import plankton_growth as pg
+    
     bins = np.linspace(0,20, 100)
     fig, ax = plt.subplots(2,1, figsize = (7,5))
-    for i in ["P_n", "P_p", "P_l", "P_z_mono"]:
+    for i in ["P_n", "P_p", "P_l"]:
         ax[0].hist(np.log(traits["N_star_"+i].flatten()),
                    alpha = 0.5, bins = bins, label = i
                  ,density = True, histtype="step")
     ax[0].legend()
     ax[0].set_xlabel("Phytoplankton densities (\mum^3 ml^-1")
     
-    ax[1].hist(np.log(traits["N_star_Z_mono"]).flatten(), density = True, bins = 30)
-    ax[1].set_xlabel("Zooplankton density (mg L^-1 = 1e6 \mum^3 ml^-1)")
     fig.tight_layout()
     fig.savefig("Figure_equilibrium_densities_phytoplankton.pdf")
     
@@ -385,12 +280,13 @@ if __name__ == "__main__":
     traits["size_P"] = np.repeat(traits["size_P"][:,np.newaxis], r_zoo, axis = 1)
     traits["size_Z"] = np.repeat(traits["size_Z"][...,np.newaxis], r_phyto,
                                  axis = 1)
-    tf = {key: np.log(traits[key].flatten()) for key in traits.keys()}
+    
+    tf = {key: np.log(traits[key].flatten()) for key in select(traits)}
     
     plt.figure()
     plt.scatter(tf["size_P"], np.exp(tf["s_zp"]), s = 1)
     
-    fig, ax = plt.subplots(3,2, figsize = (9,9))
+    fig, ax = plt.subplots(2,2, figsize = (9,9))
     
     # handling time graph
     vmin, vmax = np.percentile(tf["h_zp"], [5,95])
@@ -414,32 +310,5 @@ if __name__ == "__main__":
     ax[1,1].hist(np.exp(tf["s_zp"]), bins = 30)
     ax[1,1].set_xlabel("s_zp")
     
-    # halfsaturation constant
-    vmin, vmax = np.percentile(tf["k_zp"], [5,95])
-    cmap = ax[2,0].scatter(tf["size_P"], tf["size_Z"], c = tf["k_zp"], s = 1,
-                         vmin = vmin, vmax = vmax)
-    fig.colorbar(cmap, ax = ax[2,0])
-    ax[2,0].set_xlabel("size_P")
-    ax[2,0].set_ylabel("size_Z")
-    ax[2,0].set_title("k_zp")
-    ax[2,1].hist(tf["h_zp"], bins = 30)
-    ax[2,1].set_xlabel("h_zp")
-    
-    
-    
-    
-    fig.tight_layout()
-    
-    
-    
+    fig.tight_layout()  
     fig.savefig("Figure_joint_traits.pdf")
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    

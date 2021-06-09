@@ -1,42 +1,6 @@
 import numpy as np
 import generate_plankton as gp
 
-"""
-traits and their meaning
-
-# environmental parameters
-P: Resource supply of phosphorus [\mumol P L^-1]
-N: Resource supply of nitrogen [\mumol N L^-1]
-dil: dilution rate (same as mortality rate) [day^-1]
-I: iradiance [\mumol quanta m^-2 s^-1]
-zm: depth of epilimnion [m]
-
-
-# Phytoplantkon specific traits
-size_P: Biovolume [\mum^3]
-mu_P: maximal growth rate of phytoplankton [day ^-1]
-k_p: Halfsaturation constant wrt. phosphorus, [\mumol P L^-1]
-k_n: Halfsaturation constant wrt. nitrogen, [\mumol N L^-1]
-k_l: Halfsaturation constant wrt. Light [\mumol quanta m^-2 s^-1]
-c_p: maximum uptake rate of phosphorus [µmol P cell^-1 day^-1]
-c_n: maximum uptake rate, [µmol N cell^-1 day^-1]
-a: absorption coefficient of light, [xxx]
-m: mortality rate/dilution rate [day^-1]
-N_P: phytoplankton density [cell \mul ^-1]
-R_P: nutrient contents [mumol R cell^-1],
-
-Zooplankton traits
-size_Z: Zooplankton size [mg]
-c_Z: clearance rate [ml/h]
-N_Z: zooplankton density [mg/xxx]
-mu_Z: maximum growth rate of Zooplankton [mg day^-1]
-
-Joint variables
-h_zp: handling time of phytoplankton by zoop, [day/cell]
-s_zp: seectivity/preference of eating phytoplankton p by zooplankton z [1]
-"""
-
-h = 1 # hill exponent
 
 def light_growth(N, t, env = gp.env):
     # light limited growth at grtowth rate I_in
@@ -70,24 +34,23 @@ def phyto_growth(N, t, env = gp.env, limiting_res = limiting_growth_keys):
     # light growth might be nan if phyto densities are zero
     return np.nanmin(growth, axis = 0)
 
-def grazing(N_phyto,t, h = h):
+def grazing(N_phyto,t):
     # how much zooplankton eat of each specific phytoplankton
-    numerator = np.expand_dims(t["c_Z"],-1)*t["s_zp"]*np.expand_dims(N_phyto,-2)**h
+    numerator = np.expand_dims(t["c_Z"],-1)*t["s_zp"]*np.expand_dims(N_phyto,-2)
     
     denom = 1 + t["c_Z"]*np.einsum("...zp,...zp,...p->...z",
-                                   t["h_zp"], t["s_zp"], N_phyto**h)
+                                   t["h_zp"], t["s_zp"], N_phyto)
     return numerator/np.expand_dims(denom,-1)
 
-def plankton_growth(N, t, env, limiting_res = limiting_growth_keys, h = h):
+def plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
     N = N.copy()
     
     # separate densities into phytoplankton and zooplankton
     N_phyto = N[...,:t["r_phyto"]]
     N_zoo = N[...,t["r_phyto"]:]
-    grazed = grazing(N_phyto,t, h)
-    
-    dZ_dt = N_zoo*(t["mu_Z"]/t["alpha_Z"]
-                   *np.einsum("...p,...zp->...z",t["R_P"],grazed) - t["m_Z"])
+    grazed = grazing(N_phyto,t)
+    R_Z = np.einsum("...p,...zp->...z",t["R_P"],grazed)
+    dZ_dt = N_zoo*(t["mu_Z"]*R_Z/(R_Z + t["k_Z"]) - t["m_Z"])
     dP_dt = (N_phyto*phyto_growth(N_phyto, t, env, limiting_res)
              - gp.uc["h_day"]/gp.uc["ml_L"]*np.einsum("...z,...zp->...p", N_zoo, grazed)
              - N_phyto*env["d"])
@@ -99,7 +62,7 @@ def convert_ode_to_log(logN, t, env):
     N[N<1e-5] = 1e-5
     return plankton_growth(N, t, env)/N
 
-if __name__ == "__main__":
+if __name__ == "__main__" and False:
     import matplotlib.pyplot as plt
     from scipy.integrate import solve_ivp
     r_phyto = 1

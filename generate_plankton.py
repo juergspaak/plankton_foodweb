@@ -99,15 +99,13 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     
     # compute handling time
     # coefficients from Uiterwaal 2020, Ecology 101(4):e02975. 10.1002/ecy.2975
-    traits["h_zp"] = (-0.25*np.log(traits["size_Z"][...,np.newaxis])
+    traits["h_zp"] = (np.log(0.005/24) -0.25*np.log(traits["size_Z"][...,np.newaxis])
                             + 0.34*np.log(traits["size_P"][:,np.newaxis]))
+    # data from branco 2020, scaling volume-> length from Uye 1989
+    traits["h_zp"] = np.exp(np.log(0.001/24)
+                -2.11*(0.2878*np.log(traits["size_Z"][...,np.newaxis])+3.75)
+                -np.log(np.pi/6) + 1*np.log(traits["size_P"][:,np.newaxis]))
     
-    #traits["h_zp"] = (-2.11/3*np.log(traits["size_Z"][...,np.newaxis])
-    #                        + 1*np.log(traits["size_P"][:,np.newaxis]))
-    # average handling time should be 0.005/day, change to hours
-    # data from branco 2020
-    traits["h_zp"] = np.exp(np.log(0.005*24)
-                            + traits["h_zp"] - np.mean(traits["h_zp"]))
     
     # add selectivity
     # differences in traits
@@ -240,7 +238,7 @@ def select(traits):
     return sel_keys
 
 if __name__ == "__main__":
-    r_phyto, r_zoo, n_coms = [2,1, int(1e4)]
+    r_phyto, r_zoo, n_coms = [1,1, int(1e4)]
     traits = generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=True)
     env = generate_env(n_coms)
     #traits = phytoplankton_equilibrium(traits, env)
@@ -252,6 +250,7 @@ if __name__ == "__main__":
     ind = ((traits["N_star_P"] > 0).all(axis = -1) &
            (traits["N_star_Z"] > 0).all(axis = -1))
     
+    print(sum(traits["N_star_P"]>0))
     print(sum(ind))
     print("R_star_Z", np.nanpercentile(np.log(traits["R_star_Z"]), [5, 50, 95]))
     print("R_P", np.nanpercentile(np.log(traits["R_P"][:,np.newaxis]/traits["h_zp"]), [5, 50, 95]))

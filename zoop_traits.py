@@ -90,13 +90,10 @@ A_zoop.loc["c_Z", "size_Z"] = A_zoop.loc["size_Z", "c_Z"]
 # add correlations for k_Z = q_min * mu_Z
 # average resource concentration per species
 q_mean = np.nanmean(res_cont["R_conc"])
-# average resource concentration per mg, divide by average species size
-#q_mean += mean_zoop[0]
 
 # q_min = s*size_Z + noise, select variance of nois to have correct r_res
 var_q_mean = A_zoop.loc["size_Z", "size_Z"]*(1+s_res**2*(1-r_res**2)/r_res**2)
-A_zoop.loc["k_Z", "k_Z"] = (np.nanvar(res_cont["R_conc"])
-                            + A_zoop.loc["mu_Z", "mu_Z"])
+A_zoop.loc["k_Z", "k_Z"] = (var_q_mean + A_zoop.loc["mu_Z", "mu_Z"])
 q_min_q_mean = np.log(10) # ration between mean and min
 mean_zoop[3] = q_mean + mean_zoop[1] - np.log(q_min_q_mean)
 mean_zoop[3] = mean_zoop[3] - np.log(uc["h_day"]) # change units to hours
@@ -118,10 +115,6 @@ A_zoop.loc["c_Z", "k_Z"] = (s_res*s_c*A_zoop.loc["size_Z", "c_Z"] +
                         A_zoop.loc["mu_Z", "c_Z"])
 A_zoop.loc["k_Z", "c_Z"] = (s_res*s_c*A_zoop.loc["size_Z", "c_Z"] +
                         A_zoop.loc["mu_Z", "c_Z"])
-
-
-
-
 
 def generate_zooplankton_traits(r_spec = 1, n_com = 100):
     traits = np.exp(np.random.multivariate_normal(mean_zoop, A_zoop,
@@ -189,11 +182,9 @@ if __name__ == "__main__":
         ax_hist.hist(traits[:,i], bins, density = True, color = "blue")
         ax_hist.set_xticklabels([])
         ax_hist.set_yticklabels([])
-        try:
+        if zoop_traits[i] != "k_Z":
             ax_hist.hist(raw_data[zoop_traits[i]], bins, density = True,
                     alpha = 0.5, color = "orange")
-        except ValueError:
-            pass
         ax[i,0].set_ylabel(zoop_traits[i])
         ax[-1,i].set_xlabel(zoop_traits[i])
         
@@ -206,21 +197,3 @@ if __name__ == "__main__":
     ax[-1,-1].set_xlim(ax[-1,-1].get_ylim())
 
     fig.savefig("Figure_zooplankton_traits.pdf")
-
-"""
-data = pd.read_csv("Uiterwaal_2018_data.csv", encoding = "ISO-8859-1")
-ind = data["Major grouping 2"] == "Copepod"
-data = data[ind]
-trait = "Fittted h (day)"
-data.loc[data[trait] < 1e-6/60/60/24, trait] = np.nan
-
-
-data[trait] = np.log(data[trait])
-perc = np.nanpercentile(data[trait],[25,75])
-
-iqr = perc[1]-perc[0]
-ind = ((data[trait] > perc[0] - 1.5*iqr) &
-       (data[trait] < perc[1] + 1.5*iqr))
-data = data.loc[ind]
-
-plt.hist(data[trait],bins = 30)"""

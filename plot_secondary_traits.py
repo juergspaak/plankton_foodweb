@@ -38,7 +38,7 @@ ind1 = np.isfinite(traits["N_star_P"]).all(axis = -1)
 ind2 = np.isfinite(traits["N_star_Z"]).all(axis = -1)
 ind = ind1 & ind2
 
-traits = {key: traits[key][ind] for key in traits.keys()}
+traits = {key: traits[key][ind] for key in gp.select_keys(traits)}
 print(np.round([sum(ind1)/len(ind1), sum(ind2)/len(ind2), sum(ind)/len(ind)],3))
 
 env = {key: env[key][ind] for key in env.keys()}
@@ -49,6 +49,8 @@ n_coms = len(traits["mu_P"])
 # check whether equilibrium was computed correctly
 i = np.random.randint(n_coms)
 t_i = {key: traits[key][i] for key in traits.keys()}
+t_i["r_phyto"] = r_phyto
+t_i["r_zoo"] = r_phyto
 env_i = {key: env[key][i,0] for key in env.keys()}
 
 # check whether computation has been done correctly

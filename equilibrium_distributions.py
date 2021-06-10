@@ -1,16 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import warnings
 from timeit import default_timer as timer
 
 import generate_plankton as gp
 
+itera = 1000
 
 try:
     t_coex
 except:
     start = timer()
-    n_coms = int(10e5)
-    r_phyto = 4
+    n_coms = int(1e5)
+    r_phyto = 2
 
     traits = gp.generate_plankton(r_phyto, n_coms, evolved_zoop=True)
     env = gp.generate_env(n_coms)
@@ -21,16 +23,21 @@ except:
     ind = ind1 & ind2
     n_com_new = np.sum(ind)
     print(n_com_new/n_coms, n_com_new)
-    t_coex = {key:traits[key][ind] for key in traits.keys()}
+    
+    t_coex = {key:traits[key][ind] for key in gp.select_keys(traits)}
     env_coex = {key: env[key][ind] for key in env.keys()}
     t_coex = gp.phytoplankton_equilibrium(t_coex, env_coex)
+    
     t_all = gp.generate_plankton(r_phyto, n_com_new, evolved_zoop=True)
     env_all = gp.generate_env(n_com_new)
     t_all = gp.community_equilibrium(t_all, env_all)
     t_all = gp.phytoplankton_equilibrium(t_all, env_all)
     print("time used: ", timer()-start)
-    t_coex_log = {key: np.log(t_coex[key].flatten()) for key in t_coex.keys()}
-    t_all_log = {key: np.log(t_all[key].flatten()) for key in t_all.keys()}
+    with warnings.catch_warnings(record =True):
+        t_coex_log = {key: np.log(t_coex[key].flatten())[:itera]
+                      for key in t_coex.keys()}
+        t_all_log = {key: np.log(t_all[key].flatten())[:itera]
+                     for key in gp.select_keys(t_all)}
     t_coex_log["s_zp"] = np.exp(t_coex_log["s_zp"])
     t_all_log["s_zp"] = np.exp(t_all_log["s_zp"])
    
@@ -43,9 +50,9 @@ fig, ax = plt.subplots(5,5, figsize =(12,12))
 ax = ax.flatten()
 
 single_traits = (list(gp.pt.trait_names) + gp.zt.zoop_traits 
-                    + ["h_zp", "s_zp", "alpha_Z", "N_star_P", "N_star_Z",
-                       "R_star_n", "R_star_p", "I_out", "N_star_P_n",
-                       "N_star_P_p", "N_star_P_l", "N_star_P_res", "alpha_Z"])
+                    + ["h_zp", "s_zp", "N_star_P", "N_star_Z",
+                       "R_star_n", "R_star_p", "N_star_P_n",
+                       "N_star_P_p", "N_star_P_l", "N_star_P_res", "k_Z"])
 for i,trait in enumerate(single_traits):
     ax[i].hist(t_all_log[trait].flatten(), bins = bins, density = True)
     ax[i].hist(t_coex_log[trait].flatten(), bins = bins, density = True,

@@ -1,22 +1,22 @@
 import numpy as np
-import generate_plankton as gp
+from zoop_traits import uc
 
 
-def light_growth(N, t, env = gp.env):
+def light_growth(N, t, env):
     # light limited growth at grtowth rate I_in
     tot_abs = np.sum(env["zm"]*N*t["a"], axis = -1, keepdims = True)
     # returns nan if tot_abs is zero, but this is handled correctly in next step
     return t["mu_P"]/tot_abs*np.log((t["k_l"] + env["I_in"])/
             (t["k_l"] + env["I_in"]*np.exp(-tot_abs)))
     
-def phosphor_growth(N, t, env = gp.env):
-    P = env["d"]*env["P"] - gp.uc["ml_L"]*np.sum(N * t["c_p"], axis = -1,
+def phosphor_growth(N, t, env):
+    P = env["d"]*env["P"] - uc["ml_L"]*np.sum(N * t["c_p"], axis = -1,
                                               keepdims = True)
     P[P<0] = 0
     return t["mu_P"]*P/(P + t["k_p"])
 
-def nitrogen_growth(N, t, env = gp.env):
-    N = env["d"]*env["N"] - gp.uc["ml_L"]*np.sum(N * t["c_n"], axis = -1,
+def nitrogen_growth(N, t, env):
+    N = env["d"]*env["N"] - uc["ml_L"]*np.sum(N * t["c_n"], axis = -1,
                                                 keepdims = True)
     N[N<0] = 0
     return t["mu_P"]*N/(N  + t["k_n"])
@@ -26,7 +26,7 @@ limiting_growth = {"N": nitrogen_growth,
                   "L": light_growth}
 limiting_growth_keys = np.array(["N", "P", "L"])
 
-def phyto_growth(N, t, env = gp.env, limiting_res = limiting_growth_keys):
+def phyto_growth(N, t, env, limiting_res = limiting_growth_keys):
     
     growth = np.empty(((len(limiting_res),  ) + N.shape))
     for i, key in enumerate(limiting_res):
@@ -52,7 +52,7 @@ def plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
     R_Z = np.einsum("...p,...zp->...z",t["R_P"],grazed)
     dZ_dt = N_zoo*(t["mu_Z"]*R_Z/(R_Z + t["k_Z"]) - t["m_Z"])
     dP_dt = (N_phyto*phyto_growth(N_phyto, t, env, limiting_res)
-             - gp.uc["h_day"]/gp.uc["ml_L"]*np.einsum("...z,...zp->...p", N_zoo, grazed)
+             - uc["h_day"]/uc["ml_L"]*np.einsum("...z,...zp->...p", N_zoo, grazed)
              - N_phyto*env["d"])
     
     return np.append(dP_dt, dZ_dt, axis = -1)
@@ -62,44 +62,45 @@ def convert_ode_to_log(logN, t, env):
     N[N<1e-5] = 1e-5
     return plankton_growth(N, t, env)/N
 
-if __name__ == "__main__" and False:
+if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from scipy.integrate import solve_ivp
-    r_phyto = 1
+    import generate_plankton as gp
+    r_phyto = 2
     r_zoo = 1
     n_coms = int(1e4)
-    traits = gp.generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=True)
-    env = gp.generate_env(n_coms)
-    #env = {key: env[key][0,0] for key in env.keys()}
-    traits = gp.community_equilibrium(traits, env)
-    ind1 = np.isfinite(traits["N_star_P"]).all(axis = -1)
-    ind2 = np.isfinite(traits["N_star_Z"]).all(axis = -1)
-    ind = (np.isfinite(traits["N_star_P"]).all(axis = -1)
-           & np.isfinite(traits["N_star_Z"]).all(axis = -1))
-    traits = {key:traits[key][ind] for key in traits.keys()}
-    t2 = {}
-    i = np.random.randint(len(traits["mu_P"]))
-    for key in traits.keys():
-        t2[key] = traits[key][i]
-    env2 = {key: env[key][ind][i,0] for key in env.keys()}
-    N = np.append(t2["N_star_P"], t2["N_star_Z"])
+    traits, env = gp.generate_communities(r_phyto, n_coms)
+
+    # test whether all equilibria are computed correctly
+    N = np.append(traits["N_star_P"], traits["N_star_Z"], axis = 1)
     
-    if np.amax(np.abs(plankton_growth(N, t2, env2)))>1e-8:
-        print(plankton_growth(N, t2, env2))
-        print(phyto_growth(N[:r_phyto], t2, env2), t2["growth_P"])
+    # multispecies equilibrium
+    if np.amax(np.abs(plankton_growth(N, traits, env)))>1e-8:
+        raise ValueError("Community equilibrium not computed correctly")
         
-        print("nitrogen\n", nitrogen_growth(N[:r_phyto], t2, env2),
-              t2["growth_n"]*t2["mu_P"])
+    if r_phyto == 1:    
+        if np.amax(np.abs(nitrogen_growth(traits["N_star_P_n"], traits, env)
+                          -env["d"]))>1e-8:
+            raise ValueError("Nitrogen equilibrium not computed correctly")
+            
+        if np.amax(np.abs(phosphor_growth(traits["N_star_P_p"], traits, env)
+                          -env["d"]))>1e-8:
+            raise ValueError("Nitrogen equilibrium not computed correctly")
         
-        print("phosphorus\n", phosphor_growth(N[:r_phyto], t2, env2),
-              t2["growth_p"]*t2["mu_P"])
+        # competition for light
+        if np.amax(np.abs(light_growth(traits["N_star_P_l"], traits, env)
+                          -env["d"]))>1e-8:
+            pass # returns correct for most, some converge not fast enough
+            #raise ValueError("Light equilibrium not computed correctly")
         
-        print("light\n", light_growth(N[:r_phyto], t2, env2),
-              t2["growth_l"]*t2["mu_P"])
-        raise
+    # select a random community and simulate it
+    
+    ti, envi, i = gp.select_i(traits, env)
     
     # add environmental noise
-    N = N*np.random.uniform(1-1e-3,1+1e-3,N.shape)
+    N = np.append(ti["N_star_P"], ti["N_star_Z"], axis = 0)
+    err = 1e-1
+    N *= np.random.uniform(1-err,1+err,N.shape)
        
     
     time = [0,1000]
@@ -107,7 +108,7 @@ if __name__ == "__main__" and False:
     fig, ax = plt.subplots(2, sharex = True)
     
     
-    sol = solve_ivp(lambda t, logN: convert_ode_to_log(logN, t2, gp.env),
+    sol = solve_ivp(lambda t, logN: convert_ode_to_log(logN, ti, envi),
                          time, np.log(N), method = "LSODA")   
     
     ax[0].semilogy(sol.t, np.exp(sol.y[:r_phyto]).T, '--')

@@ -1,10 +1,15 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import linregress
+from scipy.special import lambertw
+
 import phytoplankton_traits as pt
 
-import matplotlib.pyplot as plt
+# empirically measured traits
+raw_data = {}
+allo_scal = {} # allometric scaling values
 
+########################
 # growth rates
 growth = pd.read_csv("growth_rates_brun2017.csv", encoding = 'ISO-8859-1')
 growth = growth[["Body mass (mg)", "Growth (15°C)",
@@ -27,6 +32,11 @@ growth.specific_growth *= uc["h_day"]
 growth = np.log(growth)
 growth = growth[np.isfinite(growth.growth)]
 
+raw_data["mu_Z"] = growth.specific_growth.values
+allo_scal["mu_Z"] = 0
+
+########################
+# clearance rate data
 clear = pd.read_csv("clearance_rates_brun2017.csv", encoding = 'ISO-8859-1')
 clear = clear[["Body mass (mg)", "Fmax (15°C)",
                "Specific Fmax (15°C)"]]
@@ -35,6 +45,24 @@ clear.columns = ["pred_mass", "fmax", "specific_fmax"]
 clear = np.log(clear)
 clearance = "fmax"
 
+# allometric scaling for clearance rate
+s_c, i_c, r_c, p_c, std_c = linregress(clear["pred_mass"],
+                                                clear[clearance])
+# s_c is not distinguishable from 1:
+if s_c -1.96*std_c < 1 < s_c + 1.96*std_c:
+    s_c = 1
+
+raw_data["c_Z"] = clear[clearance].values
+allo_scal["c_Z"] = s_c
+
+########################
+mortality = pd.read_csv("Hirst_Kiorboe_2002.csv")
+mortality["size_Z"] /= 1000 # convert \mug to mg
+mortality = np.log(mortality)
+raw_data["m_Z"] = mortality["m_Z"].values
+allo_scal["m_Z"] = -0.092 # value from Hirst_Kiorboe_2002
+
+########################
 # nutrient contents
 res_cont = pd.read_csv("uye_1989.csv")
 res_cont = res_cont[["Length", "N", "C", "DW"]]
@@ -50,20 +78,19 @@ s_res, i_res, r_res, p_res, std_res = linregress(res_cont["C"],
 # s_res is not distinguishable from 0:
 if s_res -1.96*std_res < np.round(s_res) < s_res + 1.96*std_res:
     s_res = np.round(s_res)
-
-# empirically measured traits
-raw_data = {}
-raw_data["mu_Z"] = growth.specific_growth.values
-
-
-raw_data["c_Z"] = clear[clearance].values
-raw_data["size_Z"] = np.append(growth.pred_mass, clear.pred_mass)
+    
 raw_data["k_Z"] = np.full(2, 0)
+allo_scal["k_Z"] = s_res
 
-zoop_traits = ["size_Z", "mu_Z", "c_Z", "k_Z"]
-A_zoop = pd.DataFrame(np.zeros((len(zoop_traits),len(zoop_traits))),
+########################
+# empirically measured sizes
+raw_data["size_Z"] = np.append(growth.pred_mass, clear.pred_mass)
+allo_scal["size_Z"] = 1
+
+zoop_traits = ["size_Z", "mu_Z", "c_Z", "m_Z", "k_Z"]
+A_zoop = pd.DataFrame(np.full((len(zoop_traits),len(zoop_traits)), np.nan),
         index = zoop_traits, columns = zoop_traits)
-mean_zoop = np.empty(4)
+mean_zoop = np.empty(len(zoop_traits))
 
 for i,trait in enumerate(zoop_traits):
     #perc = np.nanpercentile(raw_data[trait], [25,75])
@@ -73,21 +100,18 @@ for i,trait in enumerate(zoop_traits):
     #raw_data[trait] = raw_data[trait][ind]
     mean_zoop[i] = np.nanmean(raw_data[trait])
     A_zoop.loc[trait, trait] = np.nanvar(raw_data[trait])
+    if trait == "size_Z":
+        # record value for size variation
+        size_var = np.nanvar(raw_data[trait])
+    for j, traitj in enumerate(zoop_traits):
+        if i != j: # different traits
+            A_zoop.loc[trait, traitj] = (allo_scal[trait]*allo_scal[traitj]
+                                         *size_var)
+# remove data for k_Z
 raw_data["k_Z"] = np.full(2, np.nan)
 
-# allometric scaling for clearance rate
-s_c, i_c, r_c, p_c, std_c = linregress(clear["pred_mass"],
-                                                clear[clearance])
-# s_c is not distinguishable from 1:
-if s_c -1.96*std_c < 1 < s_c + 1.96*std_c:
-    s_c = 1
-    
-# covariance between size and clearance
-A_zoop.loc["size_Z", "c_Z"] = s_c*A_zoop.loc["size_Z", "size_Z"]
-A_zoop.loc["c_Z", "size_Z"] = A_zoop.loc["size_Z", "c_Z"]
-
 ###############################################################################
-# add correlations for k_Z = q_min * mu_Z
+# handle special cases for k_Z = mu_Z*q_min
 # average resource concentration per species
 q_mean = np.nanmean(res_cont["R_conc"])
 
@@ -95,26 +119,19 @@ q_mean = np.nanmean(res_cont["R_conc"])
 var_q_mean = A_zoop.loc["size_Z", "size_Z"]*(1+s_res**2*(1-r_res**2)/r_res**2)
 A_zoop.loc["k_Z", "k_Z"] = (var_q_mean + A_zoop.loc["mu_Z", "mu_Z"])
 q_min_q_mean = np.log(10) # ration between mean and min
-mean_zoop[3] = q_mean + mean_zoop[1] - np.log(q_min_q_mean)
-mean_zoop[3] = mean_zoop[3] - np.log(uc["h_day"]) # change units to hours
+mean_zoop[4] = q_mean + mean_zoop[1] - np.log(q_min_q_mean)
+mean_zoop[4] = mean_zoop[4] - np.log(uc["h_day"]) # change units to hours
 
 # corelation between k_z and other parameters
 # k_Z = q_min * mu_Z combined correlation
-A_zoop.loc["k_Z", "size_Z"] = (s_res*A_zoop.loc["size_Z", "size_Z"]
-                             + A_zoop.loc["mu_Z", "size_Z"])
-A_zoop.loc["size_Z", "k_Z"] = (s_res*A_zoop.loc["size_Z", "size_Z"]
-                             + A_zoop.loc["mu_Z", "size_Z"])
-
+# covariance between size and clearance
 A_zoop.loc["mu_Z", "k_Z"] = (A_zoop.loc["mu_Z", "mu_Z"]
                              + s_res*A_zoop.loc["mu_Z", "size_Z"])
 A_zoop.loc["k_Z", "mu_Z"] = (A_zoop.loc["mu_Z", "mu_Z"]
                              + s_res*A_zoop.loc["mu_Z", "size_Z"])
 
 
-A_zoop.loc["c_Z", "k_Z"] = (s_res*s_c*A_zoop.loc["size_Z", "c_Z"] +
-                        A_zoop.loc["mu_Z", "c_Z"])
-A_zoop.loc["k_Z", "c_Z"] = (s_res*s_c*A_zoop.loc["size_Z", "c_Z"] +
-                        A_zoop.loc["mu_Z", "c_Z"])
+    
 
 def generate_zooplankton_traits(r_spec = 1, n_com = 100):
     traits = np.exp(np.random.multivariate_normal(mean_zoop, A_zoop,
@@ -126,7 +143,7 @@ def generate_zooplankton_traits(r_spec = 1, n_com = 100):
     return trait_dict
 
 # conditional trait distributions, assuming size is known
-a = ["mu_Z", "c_Z", "k_Z"]
+a = zoop_traits[1:]
 s = "size_Z"
 A_num = A_zoop.values
 A_conditional = A_num[1:,1:] - A_num[1:,[0]].dot(1/A_num[0,0]*A_num[[0],1:])
@@ -157,17 +174,17 @@ def generate_conditional_zooplankton_traits(phyto):
     for i, trait in enumerate(zoop_traits[1:]):
         trait_dict[trait] = np.exp(other_traits[...,i]).reshape(
                                                         phyto["size_P"].shape)
-    
     return trait_dict
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
     traits = np.random.multivariate_normal(mean_zoop, A_zoop.values, 1000)
     traits = generate_conditional_zooplankton_traits(
         pt.generate_phytoplankton_traits(1,1000))
     traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
     traits = np.array([traits["size_Z"], traits["mu_Z"],
-                       traits["c_Z"], traits["k_Z"]]).T
-    traits = traits
+                       traits["c_Z"],  traits["m_Z"], traits["k_Z"]]).T
     bins = 15
     
     n = len(zoop_traits)
@@ -182,7 +199,7 @@ if __name__ == "__main__":
         ax_hist.hist(traits[:,i], bins, density = True, color = "blue")
         ax_hist.set_xticklabels([])
         ax_hist.set_yticklabels([])
-        if zoop_traits[i] != "k_Z":
+        if (zoop_traits[i] != "k_Z"):
             ax_hist.hist(raw_data[zoop_traits[i]], bins, density = True,
                     alpha = 0.5, color = "orange")
         ax[i,0].set_ylabel(zoop_traits[i])
@@ -192,6 +209,9 @@ if __name__ == "__main__":
                     color = "orange")
     ax[2,0].scatter(clear.pred_mass, clear[clearance], alpha = 0.5,
                     color = "orange")
+    ax[3,0].scatter(mortality.size_Z, mortality.m_Z, alpha = 0.5,
+                    color = "orange")
+    
     
     ax[0,0].set_ylim(ax[0,0].get_xlim())
     ax[-1,-1].set_xlim(ax[-1,-1].get_ylim())

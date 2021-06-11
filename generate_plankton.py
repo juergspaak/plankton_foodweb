@@ -46,9 +46,6 @@ s_zp: seectivity/preference of eating phytoplankton p by zooplankton z [1]
 # divided by three because they report 
 sig_size = np.sqrt(.5)
 
-# mortality rate of zooplankton
-m_Z = 0.1 # assuming a life span of 30 days
-
 env = {"I_in": 100,
        "P": 50,
        "N": 250,
@@ -110,9 +107,6 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     traits["s_zp_raw"] = np.exp(-size_diff/(2*sig_size**2))
     traits["s_zp"] = traits["s_zp_raw"]/np.sum(traits["s_zp_raw"], axis = -1,
                                                keepdims=True)
-
-    # mortality rate of zooplankton
-    traits["m_Z"] = np.full(traits["mu_Z"].shape, m_Z)
 
     return traits
 

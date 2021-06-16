@@ -11,7 +11,8 @@ allo_scal = {} # allometric scaling values
 
 ########################
 # growth rates
-growth = pd.read_csv("growth_rates_brun2017.csv", encoding = 'ISO-8859-1')
+growth = pd.read_csv("empirical_data/growth_rates_brun2017.csv",
+                     encoding = 'ISO-8859-1')
 growth = growth[["Body mass (mg)", "Growth (15°C)",
                 "Specific growth (15°C)"]]
 growth.columns = ["pred_mass", "growth", "specific_growth"]
@@ -37,7 +38,8 @@ allo_scal["mu_Z"] = 0
 
 ########################
 # clearance rate data
-clear = pd.read_csv("clearance_rates_brun2017.csv", encoding = 'ISO-8859-1')
+clear = pd.read_csv("empirical_data/clearance_rates_brun2017.csv",
+                    encoding = 'ISO-8859-1')
 clear = clear[["Body mass (mg)", "Fmax (15°C)",
                "Specific Fmax (15°C)"]]
 clear.columns = ["pred_mass", "fmax", "specific_fmax"]
@@ -56,15 +58,16 @@ raw_data["c_Z"] = clear[clearance].values
 allo_scal["c_Z"] = s_c
 
 ########################
-mortality = pd.read_csv("Hirst_Kiorboe_2002.csv")
+mortality = pd.read_csv("empirical_data/Hirst_Kiorboe_2002.csv")
 mortality["size_Z"] /= 1000 # convert \mug to mg
+mortality["size_Z"] *= 0.1 # convert DV to mg C
 mortality = np.log(mortality)
 raw_data["m_Z"] = mortality["m_Z"].values
 allo_scal["m_Z"] = -0.092 # value from Hirst_Kiorboe_2002
 
 ########################
 # nutrient contents
-res_cont = pd.read_csv("uye_1989.csv")
+res_cont = pd.read_csv("empirical_data/uye_1989.csv")
 res_cont = res_cont[["Length", "N", "C", "DW"]]
 res_cont["N"] /= 14.01 # convert grams to mol
 res_cont["C"] /= 1000 # convert \mug to mg
@@ -84,7 +87,9 @@ allo_scal["k_Z"] = s_res
 
 ########################
 # empirically measured sizes
-raw_data["size_Z"] = np.append(growth.pred_mass, clear.pred_mass)
+raw_data["size_Z"] = np.append(np.append(growth.pred_mass, clear.pred_mass),
+                               mortality["size_Z"])
+#raw_data["size_Z"] = np.append(growth.pred_mass, clear.pred_mass)
 allo_scal["size_Z"] = 1
 
 zoop_traits = ["size_Z", "mu_Z", "c_Z", "m_Z", "k_Z"]
@@ -93,13 +98,14 @@ A_zoop = pd.DataFrame(np.full((len(zoop_traits),len(zoop_traits)), np.nan),
 mean_zoop = np.empty(len(zoop_traits))
 
 for i,trait in enumerate(zoop_traits):
-    #perc = np.nanpercentile(raw_data[trait], [25,75])
-    #iqr = perc[1]-perc[0]
-    #ind = ((raw_data[trait] > perc[0] - 1.5*iqr) &
-    #        (raw_data[trait] < perc[1] + 1.5*iqr))
-    #raw_data[trait] = raw_data[trait][ind]
-    mean_zoop[i] = np.nanmean(raw_data[trait])
-    A_zoop.loc[trait, trait] = np.nanvar(raw_data[trait])
+    perc = np.nanpercentile(raw_data[trait], [25,75])
+    iqr = perc[1]-perc[0]
+    ind = ((raw_data[trait] > perc[0] - 1.5*iqr) &
+           (raw_data[trait] < perc[1] + 1.5*iqr))
+    raw_data[trait] = raw_data[trait][ind]
+    if trait != "k_Z":
+        mean_zoop[i] = np.nanmean(raw_data[trait])
+        A_zoop.loc[trait, trait] = np.nanvar(raw_data[trait])
     if trait == "size_Z":
         # record value for size variation
         size_var = np.nanvar(raw_data[trait])
@@ -109,6 +115,9 @@ for i,trait in enumerate(zoop_traits):
                                          *size_var)
 # remove data for k_Z
 raw_data["k_Z"] = np.full(2, np.nan)
+
+# increase growth rate of zooplankton by 15%, because of couple holling types
+mean_zoop[1] += np.log(1.15)
 
 ###############################################################################
 # handle special cases for k_Z = mu_Z*q_min

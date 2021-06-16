@@ -52,8 +52,8 @@ env = {"I_in": 100,
        "d": 0.1,
        "zm": 10}
 
-def generate_env(n_coms, I_in = [50,200], P= [0.5,5], N = [5,25],
-                 d = [0.01,0.2], zm = [1,50]):
+def generate_env(n_coms, I_in = [50,200], P = [1,10], N = [10,100],
+                 d = [0.05,0.2], zm = [10,100]):
     env = {"I_in": np.random.uniform(*I_in, (n_coms,1)),
                    "P": np.random.uniform(*P, (n_coms, 1)),
                    "N": np.random.uniform(*N, (n_coms,1)),
@@ -229,6 +229,35 @@ def phytoplankton_equilibrium(tr, env = env):
    
     return tr
 
+def approx_community(tr, env):
+    # approximate the community model with a LV model
+    tr["LV_A"] = np.zeros((tr["n_coms"], tr["r_phyto"] + tr["r_zoo"],
+                           tr["r_phyto"]+ tr["r_zoo"]))
+    tr["LV_A"][:, :tr["r_phyto"], :tr["r_phyto"]] = np.einsum(
+        "...i,...j->...ij", tr["mu_P"]/tr["k_n"], tr["c_n"])
+    tr["LV_A"][:, :tr["r_phyto"], -tr["r_zoo"]:] = np.einsum(
+        "...j, ...ji->...ij", tr["c_Z"], tr["s_zp"])
+    
+    tr["LV_A"][:, -tr["r_zoo"]:, :tr["r_phyto"]] = np.einsum(
+        "...j, ...i, ...ji->...ji", tr["mu_Z"]/tr["k_Z"],
+        tr["R_P"], tr["s_zp"])
+    
+    
+    # intrinsic growth rates
+    tr["LV_mu"] = np.empty((tr["n_coms"], tr["r_phyto"]+ tr["r_zoo"]))
+    tr["LV_mu"][:, -tr["r_zoo"]:] = tr["m_Z"]
+    tr["LV_mu"][:, :tr["r_phyto"]] = env["d"]*(tr["mu_P"]/tr["k_n"]*env["N"]-1)
+    
+    try:
+        tr["LV_mu_equi"] = np.einsum("...ij,...j->...i",
+                                     tr["LV_A"],np.append(tr["N_star_P"],
+                                                    tr["N_star_Z"], axis = 1))
+    except KeyError:
+        pass
+    tr["LV_N_star"] = np.linalg.solve(tr["LV_A"], tr["LV_mu"])
+    return tr
+    
+
 def select_keys(traits):
     sel_keys = list(traits.keys())
     sel_keys.remove("r_phyto")
@@ -281,6 +310,12 @@ if __name__ == "__main__":
     traits = community_equilibrium(traits, env)
     traits = phytoplankton_equilibrium(traits, env)
     
+    # how many do coexist?
+    ind1 = np.isfinite(traits["N_star_P"]).all(axis = -1)
+    ind2 = np.isfinite(traits["N_star_Z"]).all(axis = -1)
+    ind = ind1 & ind2
+    print(np.sum(ind1), np.sum(ind2), np.sum(ind1&ind2))
+    
     bins = np.linspace(0,20, 100)
     fig, ax = plt.subplots(2,1, figsize = (7,5))
     for i in ["P_n", "P_p", "P_l", "P_res", "P"]:
@@ -306,6 +341,7 @@ if __name__ == "__main__":
         warnings.simplefilter("ignore")
         tf = {key: np.log(traits[key].flatten())
               for key in select_keys(traits)}
+    
     
     fig, ax = plt.subplots(2,2, figsize = (9,9))
     

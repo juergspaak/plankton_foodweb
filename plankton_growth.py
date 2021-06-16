@@ -36,37 +36,42 @@ def phyto_growth(N, t, env, limiting_res = limiting_growth_keys):
 
 def grazing(N_phyto,t):
     # how much zooplankton eat of each specific phytoplankton
-    numerator = np.expand_dims(t["c_Z"],-1)*t["s_zp"]*np.expand_dims(N_phyto,-2)
+    numerator = np.expand_dims(t["c_Z"],-1)*t["s_zp"]
     
     denom = 1 + t["c_Z"]*np.einsum("...zp,...zp,...p->...z",
                                    t["h_zp"], t["s_zp"], N_phyto)
     return numerator/np.expand_dims(denom,-1)
 
-def plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
+def per_cap_plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
     N = N.copy()
     
     # separate densities into phytoplankton and zooplankton
     N_phyto = N[...,:t["r_phyto"]]
     N_zoo = N[...,t["r_phyto"]:]
     grazed = grazing(N_phyto,t)
-    R_Z = np.einsum("...p,...zp->...z",t["R_P"],grazed)
-    dZ_dt = N_zoo*(t["mu_Z"]*R_Z/(R_Z + t["k_Z"]) - t["m_Z"])
-    dP_dt = (N_phyto*phyto_growth(N_phyto, t, env, limiting_res)
+    R_Z = np.einsum("...p,...zp->...z",t["R_P"]*N_phyto,grazed)
+    dZ_dt = t["mu_Z"]*R_Z/(R_Z + t["k_Z"]) - t["m_Z"]
+    dP_dt = (phyto_growth(N_phyto, t, env, limiting_res)
              - uc["h_day"]/uc["ml_L"]*np.einsum("...z,...zp->...p", N_zoo, grazed)
-             - N_phyto*env["d"])
+             - env["d"])
     
     return np.append(dP_dt, dZ_dt, axis = -1)
+
+def plankton_growth(N, t, env):
+    return N*per_cap_plankton_growth(N, t, env)
 
 def convert_ode_to_log(logN, t, env):
     N = np.exp(logN)
     N[N<1e-5] = 1e-5
     return plankton_growth(N, t, env)/N
 
+
+###############################################################################
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from scipy.integrate import solve_ivp
     import generate_plankton as gp
-    r_phyto = 2
+    r_phyto = 4
     r_zoo = 1
     n_coms = int(1e4)
     traits, env = gp.generate_communities(r_phyto, n_coms)
@@ -94,12 +99,11 @@ if __name__ == "__main__":
             #raise ValueError("Light equilibrium not computed correctly")
         
     # select a random community and simulate it
-    
     ti, envi, i = gp.select_i(traits, env)
     
     # add environmental noise
     N = np.append(ti["N_star_P"], ti["N_star_Z"], axis = 0)
-    err = 1e-1
+    err = 1e-0
     N *= np.random.uniform(1-err,1+err,N.shape)
        
     
@@ -111,5 +115,5 @@ if __name__ == "__main__":
     sol = solve_ivp(lambda t, logN: convert_ode_to_log(logN, ti, envi),
                          time, np.log(N), method = "LSODA")   
     
-    ax[0].semilogy(sol.t, np.exp(sol.y[:r_phyto]).T, '--')
+    ax[0].semilogy(sol.t, np.exp(sol.y[:r_phyto]).T, '-')
     ax[1].semilogy(sol.t, np.exp(sol.y[r_phyto:]).T, '--')

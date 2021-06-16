@@ -11,7 +11,7 @@ https://esapubs.org/archive/ecol/E096/202/
 and 
 https://aslopubs.onlinelibrary.wiley.com/doi/epdf/10.1002/lno.10282
 """
-phyto_data = pd.read_csv("Phytoplankton traits.csv")
+phyto_data = pd.read_csv("empirical_data/Phytoplankton traits.csv")
 phyto_data = phyto_data[(phyto_data.temperature <= temp_range[1]) &
                         (phyto_data.temperature >= temp_range[0])]
 phyto_traits = phyto_data[["mu_p", "k_p_m", "vmax_p",
@@ -27,7 +27,6 @@ phyto_traits.columns = ["mu_p", # maximal phosphor growth rate [day^-1]
                 "R_P"] # nitrogen concentration [\mumol N cell^-1]
 
 # change q_min to mean resource concentration
-# xxx change
 phyto_traits["R_P"] = phyto_traits["R_P"]*10
 
 # add an arbitrary mortality rate
@@ -50,7 +49,7 @@ with warnings.catch_warnings(record = True):
 
 
 #light traits
-light_data = pd.read_csv("Light_traits.csv")
+light_data = pd.read_csv("empirical_data/Light_traits.csv")
 # only take species where model 1 was acceptable fit
 ind = light_data.AIC_1 > light_data.AIC_2 - 10
 light_data = light_data[ind]
@@ -106,7 +105,7 @@ gaussians["mu_P"] = (np.nanmean(raw_data["mu_P"]),
 
 
 # phytoplankton absorption coefficients
-augusti = pd.read_csv("augusti_data.csv")
+augusti = pd.read_csv("empirical_data/augusti_data.csv")
 augusti = augusti[["d", "a"]]
 augusti["d"] = augusti["d"]**3 # convert diameter to volume
 augusti["a"] = augusti["a"]*1e-6 # convert \mum^2 to mm^2
@@ -166,7 +165,7 @@ for i,trait in enumerate(trait_names):
 
 
 # add certain tradeoffs
-A_tradeoff = pd.read_csv("Three_way_tradeoff.csv", index_col=0)
+A_tradeoff = pd.read_csv("empirical_data/Three_way_tradeoff.csv", index_col=0)
 cov_tradeoff = cov_matrix.copy()
 
 for traiti in A_tradeoff.columns:

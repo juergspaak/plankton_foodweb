@@ -44,7 +44,7 @@ def grazing(N_phyto,t):
 
 def per_cap_plankton_growth(N, t, env, limiting_res = limiting_growth_keys):
     N = N.copy()
-    
+    N[N<1e-5] = 1e-5
     # separate densities into phytoplankton and zooplankton
     N_phyto = N[...,:t["r_phyto"]]
     N_zoo = N[...,t["r_phyto"]:]

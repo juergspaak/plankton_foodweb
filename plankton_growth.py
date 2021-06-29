@@ -36,7 +36,7 @@ def phyto_growth(N, t, env, limiting_res = limiting_growth_keys):
 
 def grazing(N_phyto,t):
     # how much zooplankton eat of each specific phytoplankton
-    numerator = np.expand_dims(t["c_Z"],-1)*t["s_zp"]
+    numerator = np.expand_dims(t["c_Z"],-1)*t["s_zp"]*np.expand_dims(t["e_P"],-2)
     
     denom = 1 + t["c_Z"]*np.einsum("...zp,...zp,...p->...z",
                                    t["h_zp"], t["s_zp"], N_phyto)

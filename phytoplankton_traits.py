@@ -1,23 +1,35 @@
 import numpy as np
 import pandas as pd
 import warnings
+from scipy.stats import linregress
+
+# traits relevant for pyhtoplankton growth rates
+phyto_traits = np.array(["size_P", "mu_P", "k_n", "k_p", "k_l",
+                         "c_n", "c_p", "a","e_P", "R_P"])
+
+# to store empirically measured data
+raw_data = pd.DataFrame(columns = phyto_traits) 
+allo_scal = {} # allometric scaling parameters
+
+# gaussians stores log normal distribution
+A_phyto = pd.DataFrame(np.full((len(phyto_traits), len(phyto_traits)), np.nan),
+                       index = phyto_traits, columns = phyto_traits)
 
 
-# data from outside this temperature range is rejected
-temp_range = [15, 25]
+##############################################################################
 """
 phytoplankton traits are taken from
 https://esapubs.org/archive/ecol/E096/202/
-and 
-https://aslopubs.onlinelibrary.wiley.com/doi/epdf/10.1002/lno.10282
 """
 phyto_data = pd.read_csv("empirical_data/Phytoplankton traits.csv")
+# data from outside this temperature range is rejected
+temp_range = [15, 25]
 phyto_data = phyto_data[(phyto_data.temperature <= temp_range[1]) &
                         (phyto_data.temperature >= temp_range[0])]
-phyto_traits = phyto_data[["mu_p", "k_p_m", "vmax_p",
+phyto_data = phyto_data[["mu_p", "k_p_m", "vmax_p",
                            "mu_nit", "k_nit_m", "vmax_nit", "volume",
                            "qmin_nit"]].copy()
-phyto_traits.columns = ["mu_p", # maximal phosphor growth rate [day^-1]
+phyto_data.columns = ["mu_p", # maximal phosphor growth rate [day^-1]
                 "k_p", # half saturation for phosphor growth rate [mumol L^-1]
                 "c_p", # phosphor consumption rate [mumol P cell^-1 day^-1]
                 "mu_n", # maximal nitrate growth rate [day^-1]
@@ -27,27 +39,21 @@ phyto_traits.columns = ["mu_p", # maximal phosphor growth rate [day^-1]
                 "R_P"] # nitrogen concentration [\mumol N cell^-1]
 
 # change q_min to mean resource concentration
-phyto_traits["R_P"] = phyto_traits["R_P"]*10
-
-# add an arbitrary mortality rate
-m = 0.01
-phyto_traits["m"] = m
-
-# add affinities
-phyto_traits["aff_n"] = phyto_traits["mu_n"]/phyto_traits["k_n"]
-phyto_traits["aff_p"] = phyto_traits["mu_p"]/phyto_traits["k_p"]
-
-# add R_star values
-phyto_traits["R_star_p"] = (phyto_traits["m"]*phyto_traits["k_p"]
-                            /(phyto_traits["mu_n"] - phyto_traits["k_p"]))
-phyto_traits["R_star_n"] = (phyto_traits["m"]*phyto_traits["k_n"]
-                            /(phyto_traits["mu_p"] - phyto_traits["k_n"]))
+phyto_data["R_P"] = phyto_data["R_P"]*10
+with warnings.catch_warnings(record = True):
+    phyto_data["mu_P"] = np.nanmean(phyto_data[["mu_p", "mu_n"]], axis = 1)
+del phyto_data["mu_n"], phyto_data["mu_p"]
 
 with warnings.catch_warnings(record = True):
-    phyto_traits = np.log(phyto_traits)
+    phyto_data = np.log(phyto_data)
+    
+raw_data = raw_data.append(phyto_data, ignore_index=True)
+    
+allo_scal.update(dict(k_p = 1/3, k_n = 1/3, c_p = 2/3, c_n = 2/3, size_P = 1,
+                      R_P = 0.8, mu_P = -0.25))
 
-
-
+##############################################################################
+# data from https://aslopubs.onlinelibrary.wiley.com/doi/epdf/10.1002/lno.10282
 #light traits
 light_data = pd.read_csv("empirical_data/Light_traits.csv")
 # only take species where model 1 was acceptable fit
@@ -58,52 +64,23 @@ light_data = light_data[["mu_l",# maximum light growth rate [day^-1]
     "k_l"# halfsaturation constant [day^-1 quanta^-1 mumol photon m^-2s^-1]
     ]].copy()
 light_data = np.log(light_data)
+light_data.columns = ["mu_P", "k_l"]
 
-# gaussians stores log normal distribution
-gaussians = pd.DataFrame(None)
-raw_data = {} # dictionary with all the raw data
-# remove outliers and fit gaussians to trait data
-for key in phyto_traits.keys():
-    if key == "m":
-        gaussians[key] = [np.log(0.1),0]
-        continue
-    perc = np.nanpercentile(phyto_traits[key], [25,75])
-    iqr = perc[1]-perc[0]
-    ind = ((phyto_traits[key] > perc[0] - 1.5*iqr) &
-            (phyto_traits[key] < perc[1] + 1.5*iqr))
-    phyto_traits.loc[~ind, key] = np.nan # remove outliers
-    
-    # fit  gaussian kernel
-    gaussians[key] = (np.nanmean(phyto_traits.loc[ind, key]),
-                        np.nanvar(phyto_traits.loc[ind, key]))
-    raw_data[key] = phyto_traits.loc[ind, key]
+raw_data = raw_data.append(light_data, ignore_index=True)
 
+##############################################################################
+# data from ehrlich 2019
+# defense data
+defense_data = pd.read_csv("empirical_data/ehrlich2020.csv")
+defense_data = defense_data[["Cell volume", "r", "Defense"]]
+defense_data.columns = ["size_P", "mu_P", "e_P"]
+defense_data["e_P"] = 1 - defense_data["e_P"]
+defense_data = np.log(defense_data)
 
-# remove outliers ad fit gaussians to light traits
-for key in light_data.keys():
-    perc = np.nanpercentile(light_data[key], [25,75])
-    iqr = perc[1]-perc[0]
-    ind = ((light_data[key] > perc[0] - 1.5*iqr) &
-            (light_data[key] < perc[1] + 1.5*iqr))
-    light_data[key][~ind] = np.nan
-    gaussians[key] = (np.nanmean(light_data.loc[ind, key]),
-                        np.nanvar(light_data.loc[ind, key]))
-    raw_data[key] = light_data.loc[ind, key]
-    
-    
-# fit a gaussian separately for intrinsic growth rates
-mu_data = phyto_traits[["mu_p", "mu_n"]].values.flatten()
-mu_data = np.append(mu_data, light_data.mu_l)
+raw_data = raw_data.append(defense_data, ignore_index=True)
 
-gaussians = gaussians.drop(["mu_n", "mu_p", "mu_l"], axis = 1)
-del raw_data["mu_n"], raw_data["mu_p"], raw_data["mu_l"]
-# phytoplankton growth rate
-raw_data["mu_P"] = mu_data[np.isfinite(mu_data)]
-
-gaussians["mu_P"] = (np.nanmean(raw_data["mu_P"]),
-                        np.nanvar(raw_data["mu_P"]))
-
-
+##############################################################################
+# data from augusti1989
 # phytoplankton absorption coefficients
 augusti = pd.read_csv("empirical_data/augusti_data.csv")
 augusti = augusti[["d", "a"]]
@@ -111,18 +88,49 @@ augusti["d"] = augusti["d"]**3 # convert diameter to volume
 augusti["a"] = augusti["a"]*1e-6 # convert \mum^2 to mm^2
 augusti = np.log(augusti)
 
-gaussians["a"] = (np.nanmean(augusti["a"]),
-                        np.nanvar(augusti["a"]))
-raw_data["a"] = augusti["a"]
+raw_data = raw_data.append(augusti, ignore_index=True)
+allo_scal["a"] = 0.77
+###############################################################################
+mean_phyto = pd.DataFrame(columns = phyto_traits, index = [1])
+
+# remove outliers and fit one dimensional trait data
+for i,trait in enumerate(phyto_traits):
+    # remove outliers
+    perc = np.nanpercentile(raw_data[trait], [25,75])
+    iqr = perc[1]-perc[0]
+    ind = ((raw_data[trait] > perc[0] - 1.5*iqr) &
+           (raw_data[trait] < perc[1] + 1.5*iqr))
+    raw_data.loc[~ind, trait] = np.nan
+    
+    mean_phyto[trait] = np.nanmean(raw_data[trait])
+    A_phyto.loc[trait, trait] = np.nanvar(raw_data[trait])
+    
+def nan_linreg(x,y):
+    x,y = raw_data[x].values, raw_data[y].values
+    ind = np.isfinite(x*y)
+    if np.sum(ind) == 0:
+        return [0, 0, 0, 0, np.inf]
+    return linregress(x[ind], y[ind])
+
+
+size_var = np.nanvar(raw_data["size_P"]) 
+s, i, r, p, std = nan_linreg("mu_P", "k_l")
+allo_scal["k_l"] = allo_scal["mu_P"]*s
+allo_scal["e_P"] = nan_linreg("size_P", "e_P")[0]
+
+for i,trait in enumerate(phyto_traits):
+    for j, traitj in enumerate(phyto_traits):
+        if i != j: # different traits
+            A_phyto.loc[trait, traitj] = (allo_scal[trait]*allo_scal[traitj]
+                                         *size_var)
+            
+# compare to correlations in data
+tr_norm = raw_data.values - np.nanmean(raw_data.values, axis = 0)
+with warnings.catch_warnings(record = True):
+    A_phyto_measured = np.nanmean(tr_norm.T[...,np.newaxis]*tr_norm, axis = 1)
 ##############################################################################
 # find parameters for scaling size to traits
-
-# find size scaling parameter of halfsaturation constant of light
-ind = np.all(np.isfinite(light_data.values), axis = 1)
-cor_mul_kl = np.cov(light_data.loc[ind, "mu_l"],
-                    light_data.loc[ind, "k_l"])[0,1]
-
-
+"""
 #scaling factors for size, minimum value
 # data from doi:10.1093/plankt/fbp098, Finkel et al 2010
 gaussians = gaussians.append({"mu_P": -0.25, "k_p": 0.5, "k_n": 0.5,
@@ -140,33 +148,12 @@ gaussians.columns = ["mean_trait", "std_trait", "beta_min"]
 mean_size = np.nanmean(phyto_traits["size_P"])
 std_size = np.nanmin(np.abs(gaussians["std_trait"]/gaussians["beta_min"]))
 std_size = np.nanstd(raw_data["size_P"])
-
-##############################################################################
-# fill in covariance matrix
-trait_names = np.array(["size_P", "mu_P", "k_p", "k_n", "k_l", "c_p", "c_n", "a",
-                        "R_P"])
-cov_matrix = pd.DataFrame(np.zeros((len(trait_names), len(trait_names))),
-                          index = trait_names, columns = trait_names)
-mean_traits = np.empty(len(trait_names))
-
-for i,trait in enumerate(trait_names):
-    row = gaussians.loc[trait,:]
-    # mean values for all traits
-    mean_traits[i] = gaussians.loc[trait, "mean_trait"]
-    # standard deviation for all traits
-    cov_matrix.loc[trait, trait] = row.std_trait
-    # allometric scaling
-    for traitj in trait_names:
-        if trait == traitj:
-            continue
-        cov_matrix.loc[trait, traitj] = (gaussians.loc["size_P", "std_trait"]*
-                                         gaussians.loc[trait, "beta_min"]
-                                         *gaussians.loc[traitj, "beta_min"])
+"""
 
 
 # add certain tradeoffs
 A_tradeoff = pd.read_csv("empirical_data/Three_way_tradeoff.csv", index_col=0)
-cov_tradeoff = cov_matrix.copy()
+cov_tradeoff = A_phyto.copy()
 
 for traiti in A_tradeoff.columns:
     for traitj in A_tradeoff.columns:
@@ -174,76 +161,50 @@ for traiti in A_tradeoff.columns:
     
 def generate_phytoplankton_traits(r_spec = 1, n_com = 100):
     # generate multivariate distribution
-    traits = np.exp(np.random.multivariate_normal(mean_traits, cov_matrix,
+    traits = np.exp(np.random.multivariate_normal(mean_phyto.values[0],
+                                                  A_phyto,
                                                   (n_com, r_spec)))
     # order species according to their size
     order = np.argsort(traits[...,0], axis = 1)
     trait_dict = {}
-    for i, trait in enumerate(trait_names):
+    for i, trait in enumerate(phyto_traits):
         trait_dict[trait] = traits[np.arange(n_com)[:,np.newaxis], order,i]
     
     return trait_dict
-    
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     
     traits = generate_phytoplankton_traits(10,100)
     traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
-    traits = pd.DataFrame(traits, columns = trait_names)
+    traits = pd.DataFrame(traits, columns = phyto_traits)
     
     fig, ax = plt.subplots(len(traits.keys()), len(traits.keys()),
                                figsize = (12,12), sharex = "col", sharey = "row")
     bins = 10
-    for i,keyi in enumerate(trait_names):
+    for i,keyi in enumerate(phyto_traits):
         ax[-1,i].set_xlabel(keyi)
         ax[i,0].set_ylabel(keyi)
-        for j, keyj in enumerate(trait_names):               
+        for j, keyj in enumerate(phyto_traits):               
             if i<j:
                 
                 ax[j,i].scatter(traits[keyi], traits[keyj], s = 1,
                             alpha = 0.1, color = "blue")
-                try:
-                    ax[j,i].scatter(phyto_traits[keyi], phyto_traits[keyj],
-                                    s = 2, color = "orange")
-                except:
-                    pass
+                
+                ax[j,i].scatter(raw_data[keyi], raw_data[keyj],
+                                    s = 3, color = "orange")
         
         # plot histogram
-        try:
-            ax_hist = fig.add_subplot(len(traits.keys()),
-                                      len(traits.keys()),
-                                      1 + i + i*len(traits.keys()))
-            ax_hist.hist(traits[keyi], bins, density = True, color = "blue")
-            ax_hist.set_xticklabels([])
-            ax_hist.set_yticklabels([])
-            ax_hist.hist(raw_data[keyi], bins, density = True,
-                         alpha = 0.5, color = "orange")
-            #ax_hist.set_xlim(ax[0,i].get_xlim())
+
+        ax_hist = fig.add_subplot(len(traits.keys()),
+                                  len(traits.keys()),
+                                  1 + i + i*len(traits.keys()))
+        ax_hist.hist(traits[keyi], bins, density = True, color = "blue")
+        ax_hist.set_xticklabels([])
+        ax_hist.set_yticklabels([])
+        ax_hist.hist(raw_data[keyi], bins, density = True,
+                     alpha = 0.5, color = "orange")
             
-        except KeyError:
-            pass
         ax[-1,-1].set_xlim(ax[-1,0].get_ylim())
-        
-        
-        # add real data for maximal growth rate
-        index = np.arange(len(trait_names))
-        ind_mu = index[trait_names == "mu_P"][0]
-        for mu_res in ["mu_n", "mu_p"]:
-            for t in ["k_p", "k_n", "c_n", "c_p", "size_P"]:
-                ind_t = index[trait_names == t][0]
-                if ind_t < ind_mu:
-                    ax[ind_mu, ind_t].scatter( phyto_traits[t],
-                                              phyto_traits[mu_res], 
-                                          s = 2, color = "orange")
-                else:
-                    ax[ind_t, ind_mu].scatter( phyto_traits[mu_res],
-                                              phyto_traits[t], 
-                                          s = 2, color = "orange")
-                
-    ax[index[trait_names == "k_l"][0],ind_mu].scatter(light_data["mu_l"],
-                                                          light_data["k_l"],
-                                                    s = 2, color = "orange")
-    ax[index[trait_names == "a"][0], 0].scatter(augusti["d"], augusti["a"],
-                                                s = 2, color = "orange")
+
     fig.savefig("Figure_phytoplankton_traits.pdf")

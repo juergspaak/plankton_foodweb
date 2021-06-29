@@ -52,7 +52,7 @@ env = {"I_in": 100,
        "d": 0.1,
        "zm": 10}
 
-def generate_env(n_coms, I_in = [50,200], P = [1,10], N = [10,100],
+def generate_env(n_coms, I_in = [50,200], P = [5,20], N = [10,100],
                  d = [0.05,0.2], zm = [10,100]):
     env = {"I_in": np.random.uniform(*I_in, (n_coms,1)),
                    "P": np.random.uniform(*P, (n_coms, 1)),
@@ -122,7 +122,7 @@ def community_equilibrium(tr, env = env):
     
     c_Z = np.expand_dims(tr["c_Z"],-1)
     tr["A_zoop"] = c_Z*tr["s_zp"]*(-tr["h_zp"]*tr["R_star_Z"][...,np.newaxis]
-                                   + tr["R_P"][:,np.newaxis])
+                                   + (tr["R_P"]*tr["e_P"])[:,np.newaxis])
     
     # equilibrium density of phytoplankton species
     tr["N_star_P"] = np.linalg.solve(tr["A_zoop"], tr["R_star_Z"])
@@ -162,7 +162,7 @@ def community_equilibrium(tr, env = env):
                                          tr["growth_l"]], axis = 0)
     
 
-    numerator = uc["h_day"]/uc["ml_L"]*c_Z*tr["s_zp"]
+    numerator = uc["h_day"]/uc["ml_L"]*c_Z*tr["s_zp"]*tr["e_P"][:,np.newaxis,:]
     denom = 1 + tr["c_Z"]*np.einsum("...zp,...zp,...p->...z",
                                     tr["h_zp"],tr["s_zp"],tr["N_star_P"])
 
@@ -260,9 +260,18 @@ def approx_community(tr, env):
 
 def select_keys(traits):
     sel_keys = list(traits.keys())
-    sel_keys.remove("r_phyto")
-    sel_keys.remove("r_zoo")
-    sel_keys.remove("n_coms")
+    try:
+        sel_keys.remove("n_coms")
+    except ValueError:
+        pass
+    try:
+        sel_keys.remove("r_phyto")
+    except ValueError:
+        pass
+    try:
+        sel_keys.remove("r_zoo")
+    except ValueError:
+        pass
     return sel_keys
 
 def generate_communities(r_phyto, n_coms, evolved_zoop = True, r_zoo = None,
@@ -297,13 +306,16 @@ def select_i(traits, env, i = None):
     tr_i["r_zoo"] = traits["r_zoo"]
     env_i = {key: env[key][i] for key in env.keys()}
     return tr_i, env_i,i
-    
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     
     # generate phytoplankton communities
     r_phyto, r_zoo, n_coms = [1,1, int(1e4)]
     traits = generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=False)
+    env = generate_env(n_coms)
+    traits = phytoplankton_equilibrium(traits, env)
+    
     env = generate_env(n_coms)
     
     # compute equilibria
@@ -369,3 +381,5 @@ if __name__ == "__main__":
     
     fig.tight_layout()  
     fig.savefig("Figure_joint_traits.pdf")
+    
+    

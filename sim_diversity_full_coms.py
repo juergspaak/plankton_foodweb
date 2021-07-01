@@ -8,7 +8,7 @@ n_spec_max = 4
 n_specs = np.arange(1, n_spec_max + 1)
 n_coms = int(1e4)
 
-trait_combs = np.append(gp.pt.trait_names, gp.zt.zoop_traits)
+trait_combs = np.append(gp.pt.phyto_traits, gp.zt.zoop_traits)
 trait_combs = [[], ["s_zp"], ["h_zp"]] + [[trait] for trait in trait_combs]
 trait_combs += [["c_p", "c_n", "a", "c_Z"],["k_p", "k_n"],
                 ["mu_P", "mu_Z"]]
@@ -49,7 +49,17 @@ for ic, comb in enumerate(trait_combs):
                np.isfinite(traits["N_star_Z"]).all(axis = -1))
         diversity.loc[ic, "r_spec_{}".format(n_spec*2)] = np.sum(ind)/len(ind)
 
+
 diversity["mean"] = np.sum(n_specs*diversity[["r_spec_{}".format(2*i)
+                                for i in n_specs]], axis = 1)
+diversity["tot_prob"] = np.sum(diversity[["r_spec_{}".format(2*i)
+                                for i in n_specs]], axis = 1)
+
+for i in n_specs:
+    diversity["r_spec_rel_{}".format(2*i)] = (
+                diversity["r_spec_{}".format(2*i)]/diversity["tot_prob"])
+    
+diversity["rel_mean"] = np.sum(n_specs*diversity[["r_spec_rel_{}".format(2*i)
                                 for i in n_specs]], axis = 1)
 
 diversity = diversity.loc[np.argsort(diversity["mean"])]
@@ -57,13 +67,25 @@ diversity = diversity.loc[np.argsort(diversity["mean"])]
 div_arr = diversity[["r_spec_{}".format(2*i)
                                 for i in n_specs]].values
 
-fig = plt.figure()
+fig, ax = plt.subplots(2,1,sharex = True, sharey = True)
 loc = np.arange(len(trait_combs))
 for i in range(n_spec_max):
-    plt.bar(loc, div_arr[:,i], bottom = np.sum(div_arr[:,:i], axis = 1))
+    ax[0].bar(loc, div_arr[:,i], bottom = np.sum(div_arr[:,:i], axis = 1))
     
-plt.plot(loc, diversity["mean"], 'ko')
+ax_mean = ax[0].twinx()
+ax_mean.plot(loc, diversity["mean"], 'ko')
 
-plt.xticks(loc, diversity["comb"], rotation = 90)
+ax[1].set_xticks(loc)
+ax[1].set_xticklabels(diversity["comb"], rotation = 90)
 
+div_arr = diversity[["r_spec_rel_{}".format(2*i)
+                                for i in n_specs]].values
+for i in range(n_spec_max):
+    ax[1].bar(loc, div_arr[:,i], bottom = np.sum(div_arr[:,:i], axis = 1))
+    
+ax_mean = ax[1].twinx()
+ax_mean.plot(loc, diversity["rel_mean"], 'ko')
+
+
+fig.tight_layout()
 fig.savefig("Figure_diversity_full_coms.pdf")

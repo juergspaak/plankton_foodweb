@@ -5,103 +5,79 @@ plt.style.use('dark_background')
 
 import phytoplankton_traits as pt
 
-fig = plt.figure(figsize = (10,10)) 
+fig = plt.figure(figsize = (13,13)) 
 
 def plot(save_id = [0]):
     fig.savefig("PP_slides/PP_phytoplankton_traits_{}.png".format(save_id[0]))
     save_id[0] += 1
     
 bins = 20
+alpha = 0.5
+fs = 24
 
-col_simple = "purple"
-col_emp = "orange"
-col_full = "blue"
+traits = pt.generate_phytoplankton_traits(1,500)
+traits = {key:np.log(traits[key]) for key in traits.keys()}
+
+trait_names = ["Size", "Maximum\ngrowth", "Halfsaturation\nnitrogen",
+               "Halfsatuation\nphosphorus", "Halfsaturation\nlight",
+               "Nitrogen\nuptake", "Phosphorus\nuptake", "Light\nuptake",
+               "Edibility", "Resource\nconcentration"]
+
+traits_shown = ["size_P", "mu_P", "c_n", "R_P"]
+trait_names = ["Size", "Maximum\ngrowth", "Nitrogen\nuptake",
+               "Resource\nconcentration"]
+n = len(traits_shown)
+ax = np.empty((n,n),dtype = "object")
+for i, trait in enumerate(traits_shown):
+    ax[i,i] = fig.add_subplot(n,n,1+i*(n+1))
+    ax[i,i].hist(pt.raw_data[trait], color = "orange",
+             bins = bins, alpha = alpha, density = True)
+    ax[i,i].set_xticks([])
+    ax[i,i].set_yticks([])
+    ax[i,i].set_title(trait_names[i], fontsize = fs)
     
-traits = pt.generate_phytoplankton_traits(10,1000)
-traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
-
-itera = int(1e4)
-ax_size = fig.add_subplot(331)
-
-ax_size.hist(pt.raw_data["size_P"], density = True, alpha = 1,
-             label = "empirical", color = col_emp)
-ax_size.set_xlabel("log(volume)")
-ax_size.set_ylabel("frequency")
-ax_size.legend(fontsize = 8)
 plot()
 
-ax_size.hist(traits["size_P"], bins = bins, density=True, label = "simulation",
-             color = col_full, alpha = 0.5)
-plot()
-
-ax_size_t1 = fig.add_subplot(334)
-t1 = "k_p"
-size_id = 0
-t1_id = t1 == pt.trait_names
-size_range = np.percentile(traits["size_P"], [5,95])
-alpha = pt.mean_traits[t1_id] - pt.mean_traits[size_id]*pt.gaussians.loc[t1, "beta_min"]
-t1_simple = (size_range*pt.gaussians.loc[t1, "beta_min"] + alpha)
-ax_size_t1.plot(size_range, t1_simple, color = col_simple)
-ax_size_t1.set_xlabel("log(volume)")
-ax_size.set_xlabel("")
-ax_size_t1.set_ylabel("log({})".format(t1))
-plot()
-
-
-ax_t1 = fig.add_subplot(335)
-ax_t1.hist(traits["size_P"]*pt.gaussians.loc[t1, "beta_min"] + alpha,
-           bins = bins, density = True, color = col_simple,
-           alpha = 0.5)
-ax_t1.set_xlabel("log({})".format(t1))
-plot()
-
-ax_t1.hist(pt.raw_data[t1], bins = bins, density = True, alpha = 0.5,
-           color = col_emp)
-plot()
-
-ax_size_t1.scatter(traits["size_P"], traits[t1],
-                   s = 2, color = col_full, alpha = 0.1)
-ax_t1.hist(traits[t1], bins = bins, color = col_full, density = True,
-           alpha = 0.5)
-plot()
-
-ax_size_t1.scatter(pt.phyto_traits["size_P"], pt.phyto_traits[t1], 
-                   color = col_emp)
-plot()
-
-
-###############################################################################
-# add another trait
-t2 = "k_n"
-ax_size_t2 =fig.add_subplot(337)
-ax_size_t2.set_xlabel("log(volume)")
-ax_size_t1.set_xlabel("")
-ax_size_t2.set_ylabel("log({})".format(t2))
-
-t1_id = t1 == pt.trait_names
-size_range = np.percentile(traits["size_P"], [5,95])
-alpha = pt.mean_traits[t1_id] - pt.mean_traits[size_id]*pt.gaussians.loc[t1, "beta_min"]
-
-ax_size_t2.scatter(traits["size_P"], traits[t2], 
-                   s = 2, color = col_full, alpha = 0.1)
-
-ax_t2 = fig.add_subplot(339)
-ax_t2.hist(traits[t2], bins = bins, color = col_full, density = True, alpha = 0.5)
-ax_t2.set_xlabel("log({})".format(t2))
-ax_t2.hist(pt.raw_data[t2], alpha = 0.5, color = col_emp, density = True)
-ax_size_t2.scatter(pt.phyto_traits["size_P"], pt.phyto_traits[t2], 
-                   color = col_emp)
-plot()
-
-ax_t1_t2 = fig.add_subplot(338)
-ax_t1_t2.scatter(traits[t1], traits[t2], color = col_full, alpha = 0.1, s = 2)
-ax_t1_t2.set_xlabel(ax_t1.get_xlabel())
-ax_t1.set_xlabel("")
+for i, trait in enumerate(traits_shown):
+    ax[i,i].hist(traits[trait], color = "blue",
+             bins = bins, alpha = alpha, density = True)
 
 plot()
-ax_t1_t2.scatter(pt.phyto_traits[t1], pt.phyto_traits[t2], 
-                   color = col_emp)
+
+for i, trait in enumerate(traits_shown):
+    if i== 0:
+        continue
+    ax[i,0] = fig.add_subplot(n,n,1+i*n)
+    ax[i,0].scatter(traits["size_P"], traits[trait], s = 1, color = "blue")
+    ax[i,0].set_ylabel(trait_names[i], fontsize = fs+2)
+    if i != n-1:
+        ax[i,0].set_xticks([])
+ax[-1,0].set_xlabel(trait_names[0], fontsize = fs)  
+
+plot() 
+   
+for i, trait in enumerate(traits_shown):
+    if i == 0:
+            continue
+    for j, traitj in enumerate(traits_shown):
+        if j>=i or j==0:
+            continue
+        ax[i,j] = fig.add_subplot(n,n,1 + i*n + j)
+        ax[i,j].scatter(traits[traitj], traits[trait], s = 1, color = "blue")
+        ax[i,j].set_yticks([])
+        #ax[i,j].set_ylabel(trait_names[i], fontsize = 16)
+        if i != n-1:
+            ax[i,j].set_xticks([])
+        else:
+            ax[i,j].set_xlabel(trait_names[j], fontsize = fs-2)
+    
 plot()
 
-
-
+for i, trait in enumerate(traits_shown):
+    for j, traitj in enumerate(traits_shown):
+        if j>=i:
+            continue
+        ax[i,j].scatter(pt.raw_data[traitj], pt.raw_data[trait],
+                        s = 5, color = "orange")
+        
+plot()

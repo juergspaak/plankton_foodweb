@@ -76,7 +76,7 @@ for i in range(n_coms):
     ti, envi, i = gp.select_i(traits, env, i)
     for t_name in trait_combs[rand_trait[i]]:
         if t_name == "s_zp":
-            traits["s_zp"][:] = 1
+            ti["s_zp"][:] = 1
         else:
             # take geometric mean
             ti[t_name][:] = np.exp(np.mean(np.log(ti[t_name])

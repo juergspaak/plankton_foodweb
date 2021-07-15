@@ -62,8 +62,8 @@ def plankton_growth(N, t, env):
 
 def convert_ode_to_log(logN, t, env):
     N = np.exp(logN)
-    N[N<1e-5] = 1e-5
-    return plankton_growth(N, t, env)/N
+    # dlog(N)/dt = 1/N dN/dt
+    return per_cap_plankton_growth(N, t, env)
 
 
 ###############################################################################

@@ -10,16 +10,22 @@ n_coms = int(1e4)
 
 trait_combs = np.append(gp.pt.phyto_traits, gp.zt.zoop_traits)
 trait_combs = [[], ["s_zp"], ["h_zp"]] + [[trait] for trait in trait_combs]
-trait_combs += [["c_p", "c_n", "a", "c_Z"],["k_p", "k_n"],
-                ["mu_P", "mu_Z"]]
-trait_combs = np.array(trait_combs)
+trait_combs += [["c_p", "c_n", "a"],["k_p", "k_n", "k_l"], ["c_Z", "k_Z"]]
+trait_combs = np.array(trait_combs, dtype = "object")
 
 columns = ["comb", "n_comb"] + ["r_spec_{}".format(2*i)
                                 for i in n_specs]
 
 diversity = pd.DataFrame(data = np.nan, columns = columns,
                          index = np.arange(len(trait_combs)))
-
+full_names = ["Unperturbed", "Selectivity", "Handling\ntime",
+            "Size\nphyto", "Gorwth\nphyto", "Halfsaturation\nN",
+            "Halfsaturation\nP","Halfsaturation\nlight", "Uptake\nN",
+            "Uptake\nP", "Absorption", "Edibility", "Resource\nContent",
+            "Size\nzoo", "Growth\nzoo", "Clearance", "Mortality\nzoo",
+            "Halfsaturation\nzoo"]
+full_names = full_names + (len(diversity)-len(full_names))*[""]
+diversity["full_names"] = full_names
 for ic, comb in enumerate(trait_combs):
     diversity.loc[ic, "comb"] = "-".join(comb)
     diversity.loc[ic, "n_comb"] = len(comb)
@@ -67,25 +73,26 @@ diversity = diversity.loc[np.argsort(diversity["mean"])]
 div_arr = diversity[["r_spec_{}".format(2*i)
                                 for i in n_specs]].values
 
-fig, ax = plt.subplots(2,1,sharex = True, sharey = True)
-loc = np.arange(len(trait_combs))
-for i in range(n_spec_max):
-    ax[0].bar(loc, div_arr[:,i], bottom = np.sum(div_arr[:,:i], axis = 1))
+if __name__ == "__main__":
+    fig, ax = plt.subplots(2,1,sharex = True, sharey = True)
+    loc = np.arange(len(trait_combs))
+    for i in range(n_spec_max):
+        ax[0].bar(loc, div_arr[:,i], bottom = np.sum(div_arr[:,:i], axis = 1))
+        
+    ax_mean = ax[0].twinx()
+    ax_mean.plot(loc, diversity["mean"], 'ko')
     
-ax_mean = ax[0].twinx()
-ax_mean.plot(loc, diversity["mean"], 'ko')
-
-ax[1].set_xticks(loc)
-ax[1].set_xticklabels(diversity["comb"], rotation = 90)
-
-div_arr = diversity[["r_spec_rel_{}".format(2*i)
-                                for i in n_specs]].values
-for i in range(n_spec_max):
-    ax[1].bar(loc, div_arr[:,i], bottom = np.sum(div_arr[:,:i], axis = 1))
+    ax[1].set_xticks(loc)
+    ax[1].set_xticklabels(diversity["comb"], rotation = 90)
     
-ax_mean = ax[1].twinx()
-ax_mean.plot(loc, diversity["rel_mean"], 'ko')
-
-
-fig.tight_layout()
-fig.savefig("Figure_diversity_full_coms.pdf")
+    div_arr = diversity[["r_spec_rel_{}".format(2*i)
+                                    for i in n_specs]].values
+    for i in range(n_spec_max):
+        ax[1].bar(loc, div_arr[:,i], bottom = np.sum(div_arr[:,:i], axis = 1))
+        
+    ax_mean = ax[1].twinx()
+    ax_mean.plot(loc, diversity["rel_mean"], 'ko')
+    
+    
+    fig.tight_layout()
+    fig.savefig("Figure_diversity_full_coms.pdf")

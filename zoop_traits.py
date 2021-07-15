@@ -190,43 +190,63 @@ def generate_conditional_zooplankton_traits(phyto):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    import generate_plankton as gp
+    import plankton_growth as pg
+    import warnings
 
-    traits = np.random.multivariate_normal(mean_zoop.values[0],
-                                           A_zoop.values, 1000)
-    traits = generate_conditional_zooplankton_traits(
-        pt.generate_phytoplankton_traits(1,1000))
-    traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
-    traits = np.array([traits["size_Z"], traits["mu_Z"],
+    # generate communities
+    n_coms = 5000
+    traits = gp.generate_plankton(1, n_coms)
+    env = gp.generate_env(n_coms)
+    
+    # compute maximum attained growth rate
+    traits = gp.phytoplankton_equilibrium(traits, env)
+    N = np.append(traits["N_star_P_res"], np.zeros((n_coms, 1)), axis = 1)
+    with warnings.catch_warnings(record = True):
+        traits["mu_Z_effective"] = pg.per_cap_plankton_growth(N,traits, env)[:,1]
+    
+    traits = {key: np.log(traits[key].flatten())
+              for key in gp.select_keys(traits)}
+    traits = np.array([traits["size_Z"], traits["mu_Z_effective"],
                        traits["c_Z"],  traits["m_Z"], traits["k_Z"]]).T
     bins = 15
     
     n = len(zoop_traits)
     fig, ax = plt.subplots(n,n,figsize = (9,9), sharex = "col", sharey = "row")
     
+    trait_names = ["Size", "Growth", "Clearance", "Mortality", "Half\nsaturation"]
+    fs = 16
+    s = 5
     for i in range(n):
         for j in range(n):
             if i>j:
                 ax[i,j].scatter(traits[:,j], traits[:,i], s = 2, alpha = 0.1,
                                 color = "blue")
+            if j>i:
+                ax[i,j].set_frame_on(False)
+            ax[i,j].set_xticks([])
+            ax[i,j].set_yticks([])
         ax_hist = fig.add_subplot(n,n,1 + (n+1)*i)
         ax_hist.hist(traits[:,i], bins, density = True, color = "blue")
         ax_hist.set_xticklabels([])
         ax_hist.set_yticklabels([])
+        ax_hist.set_title(trait_names[i], fontsize = fs)
         if (zoop_traits[i] != "k_Z"):
             ax_hist.hist(raw_data[zoop_traits[i]], bins, density = True,
                     alpha = 0.5, color = "orange")
-        ax[i,0].set_ylabel(zoop_traits[i])
-        ax[-1,i].set_xlabel(zoop_traits[i])
+        ax[i,0].set_ylabel(trait_names[i], fontsize = fs, rotation = 0,
+                           ha = "right")
+        ax[-1,i].set_xlabel(trait_names[i], fontsize = fs)
         
     ax[1,0].scatter(growth.pred_mass, growth.specific_growth, alpha = 0.5,
-                    color = "orange")
+                    color = "orange", s = s)
     ax[2,0].scatter(clear.pred_mass, clear[clearance], alpha = 0.5,
-                    color = "orange")
+                    color = "orange", s = s)
     ax[3,0].scatter(mortality.size_Z, mortality.m_Z, alpha = 0.5,
-                    color = "orange")
+                    color = "orange", s = s)
     
     
     ax[0,0].set_ylim(ax[0,0].get_xlim())
     ax[-1,-1].set_xlim(ax[-1,-1].get_ylim())
 
-    fig.savefig("Figure_zooplankton_traits.pdf")
+    fig.savefig("Figure_zooplankton_traits.png")

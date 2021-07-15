@@ -25,8 +25,7 @@ env_org = copy.deepcopy(env)
 
 trait_combs = np.append(gp.pt.phyto_traits, gp.zt.zoop_traits)
 trait_combs = [[], ["s_zp"], ["h_zp"]] + [[trait] for trait in trait_combs]
-trait_combs += [["c_p", "c_n", "a", "c_Z"],["k_p", "k_n"],
-                ["mu_P", "mu_Z"]]
+trait_combs += [["c_p", "c_n", "a"],["k_p", "k_n", "k_l"], ["c_Z", "k_Z"]]
 trait_combs = np.array(trait_combs, dtype = "object")
 
 columns = ["comb", "n_comb"] + ["r_spec_{}".format(2*i)

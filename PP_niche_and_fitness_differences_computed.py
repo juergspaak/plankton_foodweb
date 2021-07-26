@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 data = pd.DataFrame()
-for i in [0,3,4,5]:
+for i in range(1,7):
     data_new = pd.read_csv("NFD_data_{}.csv".format(i))
     data = data.append(data_new, ignore_index=True)
 
 data.to_csv("NFD_data_all.csv", index = False)
-data = pd.read_csv("NFD_data_all_preselect.csv")
+#data = pd.read_csv("NFD_data_all_preselect.csv")
 # remove intraspecific facilitation
 data = data[np.all(data[["FD0", "FD1"]]<1, axis = 1)]
 data["FD_inf"] = 1-1/(1-np.nanmin(data[["FD0", "FD1"]], axis = 1))
@@ -44,7 +44,7 @@ plt.ylabel("Fitness differences", fontsize = 20, rotation = 0, ha = "right")
 fig.tight_layout()
 plot()
 
-n_coms = 500
+n_coms = 200
 s = 5
 ind = (data.trait_comb == "Ref").values
 plt.scatter(data.loc[ind,"ND0"][:n_coms], data.loc[ind,"FD_inf"][:n_coms],
@@ -52,7 +52,6 @@ plt.scatter(data.loc[ind,"ND0"][:n_coms], data.loc[ind,"FD_inf"][:n_coms],
 plt.plot(np.nanmedian(data.loc[ind, "ND0"]),
          np.nanmedian(data.loc[ind, "FD_inf"]), 'o', color = "blue",
          markersize = 15)
-print(np.cov(data.loc[ind, ["ND0", "FD_inf"]].T))
 plot()
 
 
@@ -62,14 +61,12 @@ plt.scatter(data.loc[ind,"ND0"][:n_coms], data.loc[ind,"FD_inf"][:n_coms],
 plt.plot(np.nanmedian(data.loc[ind, "ND0"]),
          np.nanmedian(data.loc[ind, "FD_inf"]), 'o', color = "green",
          markersize = 15)
-print(np.cov(data.loc[ind, ["ND0", "FD_inf"]].T))
 plot()
 
-ind = data.trait_comb == "k_n"
+ind = data.trait_comb == "k_Z"
 plt.scatter(data.loc[ind,"ND0"][:n_coms], data.loc[ind,"FD_inf"][:n_coms],
             s = 5, color = "orange")
 plt.plot(np.nanmedian(data.loc[ind, "ND0"]),
          np.nanmedian(data.loc[ind, "FD_inf"]), 'o', color = "orange",
          markersize = 15)
-print(np.cov(data.loc[ind, ["ND0", "FD_inf"]].T))
 plot()

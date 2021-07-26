@@ -29,7 +29,7 @@ def proj_cov(A, tol = 1e-10, max_iter = 100):
         
         # project onto smi positive definite amtrices
         eigval, eigvec = np.linalg.eigh(X_off)
-        X_spd = (eigvec*np.maximum(eigval,0)).dot(eigvec.T)
+        X_spd = (eigvec*np.maximum(eigval,1e-7)).dot(eigvec.T)
         
         # find next step length
         dx = X_spd - X_off
@@ -47,12 +47,6 @@ phyto_traits = np.array(["size_P", "mu_P", "k_n", "k_p", "k_l",
 # to store empirically measured data
 raw_data = pd.DataFrame(columns = phyto_traits) 
 allo_scal = {} # allometric scaling parameters
-
-# gaussians stores log normal distribution
-A_phyto = pd.DataFrame(np.full((len(phyto_traits), len(phyto_traits)), np.nan),
-                       index = phyto_traits, columns = phyto_traits)
-
-
 
 ##############################################################################
 """
@@ -145,7 +139,6 @@ for i,trait in enumerate(phyto_traits):
     raw_data.loc[~ind, trait] = np.nan
     
     mean_phyto[trait] = np.nanmean(raw_data[trait])
-    A_phyto.loc[trait, trait] = np.nanvar(raw_data[trait])
     std_phyto[trait] = np.nanstd(raw_data[trait])
     
     
@@ -167,13 +160,12 @@ for i,trait in enumerate(phyto_traits):
     corr_theory.loc[trait, trait] = 1
     for j, traitj in enumerate(phyto_traits):
         if i != j: # different traits
-            A_phyto.loc[trait, traitj] = (allo_scal[trait]*allo_scal[traitj]
-                                         *size_var)
             corr_theory.loc[trait, traitj] = (allo_scal[trait]*allo_scal[traitj]
                         *size_var
                         /(std_phyto[trait]*std_phyto[traitj])).values
             n_measurments.loc[trait, traitj] = np.sum(np.isfinite(
                                         raw_data[trait]*raw_data[traitj]))
+            
 with warnings.catch_warnings(record = True):           
     # compute confidence interval of correlation based on empirical measurments
     corr_empirical = raw_data.corr()
@@ -193,19 +185,12 @@ with warnings.catch_warnings(record = True):
     
 # this matrix might not be positive semidefinite (i.e. not a covariance matrix)
 # find the closest covariance matrix (measured in Frobenius norm)
-corr_phyto = proj_cov(corr_phyto)    
+corr_phyto = pd.DataFrame(proj_cov(corr_phyto), index = phyto_traits,
+                          columns = phyto_traits)
 
 # the base covariance matrix of phytoplankton
 cov_phyto = corr_phyto*std_phyto.values*std_phyto.values[0,:,np.newaxis]
-##############################################################################
-# find parameters for scaling size to traits
-# add certain tradeoffs
-A_tradeoff = pd.read_csv("empirical_data/Three_way_tradeoff.csv", index_col=0)
-cov_tradeoff = A_phyto.copy()
-
-for traiti in A_tradeoff.columns:
-    for traitj in A_tradeoff.columns:
-        cov_tradeoff.loc[traiti, traitj] = A_tradeoff.loc[traiti, traitj]
+cov_base = corr_phyto*std_phyto.values*std_phyto.values[0,:,np.newaxis]
     
 def generate_phytoplankton_traits(r_spec = 1, n_com = 100,
                                   std = None,
@@ -253,10 +238,12 @@ def generate_phytoplankton_traits(r_spec = 1, n_com = 100,
     
     return trait_dict
 
-if __name__ == "__main__" and False:
+if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    from generate_plankton import generate_base_traits
     
     traits = generate_phytoplankton_traits(10,100)
+    traits = generate_base_traits(10,100)
     traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
     traits = pd.DataFrame(traits, columns = phyto_traits)
     

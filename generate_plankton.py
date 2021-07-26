@@ -61,7 +61,81 @@ def generate_env(n_coms, I_in = [50,200], P = [5,20], N = [10,100],
                    "zm": np.random.uniform(*zm, (n_coms,1))}
     return env
 
-def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
+def generate_base_traits(r_spec = 1, n_com = 100, std = None, diff_std = {},
+                                  corr = None, phyto = True, size = None,
+                                  const_traits = [], tradeoffs = {}):
+    
+    # generate random size if size is not given
+    if size is None:
+        if phyto:
+            size = np.random.normal(pt.mean_phyto["size_P"],
+                                    pt.std_phyto["size_P"], (n_com,r_spec,1))
+        else:
+            size = np.random.normal(zt.mean_zoop["size_Z"],
+                                    zt.std_zoop["size_Z"], (n_com,r_spec,1))
+    else:
+        size.shape = size.shape + (1,)
+    
+    # order species by size within each community
+    size = np.sort(size, axis = 1)
+    
+    # set variation or tradeoffs to wanted value
+    if std is None:
+        std = pt.std_phyto.copy() if phyto else zt.std_zoop.copy()
+    if corr is None:
+        corr = pt.corr_phyto.copy() if phyto else zt.corr_zoop.copy()
+    
+    # change variation of certain traits
+    for key in diff_std.keys():
+        if key in std.columns:
+            std[key] = diff_std[key]
+    
+    # change tradeoffs between traits
+    for key in tradeoffs.keys():
+        key1, key2 = key.split(":")
+        if key1 in corr.columns and key2 in corr.columns:
+            corr.loc[key1, key2] = tradeoffs[key]
+            corr.loc[key2, key1] = tradeoffs[key]
+
+
+    # mean trait values per community
+    mean = pt.mean_phyto.values if phyto else zt.mean_zoop.values
+    
+   
+    # combine corrlation and standard deviation into covariance matrix
+    cov = (corr*std.values*std.values[0,:,np.newaxis]).values
+    
+    # generate conditional distribution given size
+    mu_cond = mean[:,1:] + cov[1:,0]/cov[0,0]*(size - mean[0,0])
+    cov_cond = cov[1:,1:] - cov[1:,[0]].dot(1/cov[0,0]*cov[[0],1:])
+    if phyto:
+        print(np.round(corr,2), "\n", 
+              np.linalg.eigvalsh(corr))
+    traits = mu_cond + np.random.multivariate_normal(np.zeros(len(cov[1:])),
+                                                     cov_cond, size.shape[:-1])
+    traits = np.exp(traits)
+    trait_dict = {"size_P" if phyto else "size_Z": np.exp(size[...,0])}
+    trait_names = pt.phyto_traits if phyto else zt.zoop_traits
+    for i, trait in enumerate(trait_names[1:]):
+        trait_dict[trait] = traits[...,i]
+        
+    for key in const_traits:
+        try:
+            trait_dict[key][:] = np.exp(np.random.normal(pt.mean_phyto[key],
+                                            pt.std_phyto[key], (n_com,1)))
+        except KeyError:
+            pass
+        try:
+            trait_dict[key][:] = np.exp(np.random.normal(zt.mean_zoop[key],
+                                            zt.std_zoop[key], (n_com,1)))
+        except KeyError:
+            pass
+    
+    return trait_dict
+
+def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
+                      size_P = None, const_traits = [], tradeoffs = {},
+                      size_Z = None, diff_std = {}):
     """ Generate traits of plankton communities
     
     Parameters:
@@ -74,15 +148,27 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
         community traits
     """
     
-    traits_phyto = pt.generate_phytoplankton_traits(r_phyto, n_coms)
+    traits_phyto = generate_base_traits(r_phyto, n_coms, size = size_P,
+                        tradeoffs = tradeoffs, const_traits = const_traits,
+                        diff_std = diff_std)
 
     if evolved_zoop:
-        traits_zoop = zt.generate_conditional_zooplankton_traits(traits_phyto)
+        size_Z = np.log(traits_phyto["size_P"]*uc["mum3_mg"]*np.exp(zt.zoop_pref))
+        # add noise
+        size_Z = size_Z + np.random.normal(0, zt.sig_size_noise, size_Z.shape)
+
+        traits_zoop = generate_base_traits(r_phyto, n_coms, phyto = False,
+                                           size = size_Z, diff_std = diff_std,
+                                           tradeoffs = tradeoffs,
+                                           const_traits = const_traits)
         r_zoop = r_phyto
     else: 
         if r_zoop is None:
             r_zoop = r_phyto
-        traits_zoop = zt.generate_zooplankton_traits(r_zoop, n_coms)    
+        traits_zoop = generate_base_traits(r_zoop, n_coms, phyto = False,
+                                        size = size_Z,
+                                        tradeoffs = tradeoffs,
+                                        const_traits = const_traits)    
     
     traits_phyto.update(traits_zoop)
     traits = traits_phyto
@@ -98,7 +184,9 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     traits["h_zp"] = np.exp(np.log(0.001/24)
                 -2.11*(0.2878*np.log(traits["size_Z"][...,np.newaxis])+3.75)
                 -np.log(np.pi/6) + 1*np.log(traits["size_P"][:,np.newaxis]))
-    
+    if "h_zp" in const_traits:
+        traits["h_zp"][:] = np.exp(np.mean(np.log(traits["h_zp"]),
+                                           axis = (1,2),keepdims=True))
     
     # add selectivity
     # differences in traits
@@ -107,6 +195,8 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True):
     traits["s_zp_raw"] = np.exp(-size_diff/(2*sig_size**2))
     traits["s_zp"] = traits["s_zp_raw"]/np.sum(traits["s_zp_raw"], axis = -1,
                                                keepdims=True)
+    if "s_zp" in const_traits:
+        traits["s_zp"][:] = 1
 
     return traits
 
@@ -182,6 +272,7 @@ def community_equilibrium(tr, env = env):
     tr["N_star_P"][tr["N_star_Z"]<0] = np.nan
     tr["N_star_Z"][tr["N_star_Z"]<0] = np.nan
     return tr
+
 
 def phytoplankton_equilibrium(tr, env = env):
 
@@ -275,10 +366,12 @@ def select_keys(traits):
     return sel_keys
 
 def generate_communities(r_phyto, n_coms, evolved_zoop = True, r_zoo = None,
-                         monoculture_equi = True):
+                         monoculture_equi = True, size_P = None, const_traits = [],
+                         tradeoffs = {}, size_Z = None, diff_std = {}):
     
-    traits = generate_plankton(r_phyto, n_coms, r_zoo,
-                               evolved_zoop=evolved_zoop)
+    traits = generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=evolved_zoop,
+                               size_P = size_P, const_traits = const_traits, tradeoffs = tradeoffs,
+                               size_Z = size_Z, diff_std = diff_std)
     env = generate_env(n_coms)
     traits = community_equilibrium(traits, env)
     
@@ -307,11 +400,12 @@ def select_i(traits, env, i = None):
     env_i = {key: env[key][i] for key in env.keys()}
     return tr_i, env_i,i
 
-if __name__ == "__main__":
+
+if __name__ == "__main__" and False:
     import matplotlib.pyplot as plt
     
     # generate phytoplankton communities
-    r_phyto, r_zoo, n_coms = [1,1, int(1e4)]
+    r_phyto, r_zoo, n_coms = [2,2, int(1e4)]
     traits = generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=False)
     env = generate_env(n_coms)
     traits = phytoplankton_equilibrium(traits, env)

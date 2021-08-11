@@ -3,43 +3,6 @@ import pandas as pd
 import warnings
 from scipy.stats import linregress
 
-def proj_cov(A, tol = 1e-10, max_iter = 100):
-    """
-    Reference:  N. J. Higham, Computing the nearest correlation
-    matrix---A problem from finance. IMA J. Numer. Anal.,
-    22(3):329-343, 2002.
-    """
-
-    dx = np.zeros(np.shape(A))
-    # x projected onto covariance matrix space
-    X_spd = np.copy(A)
-    # relative difference between last and this iteration
-    rel_diff = np.inf
-    iteration = 1
-    while rel_diff > tol:
-        iteration +=1
-        # avoid infinite loop
-        if iteration > max_iter:
-            raise RuntimeError
-        # copy old value
-        X_spd_old = np.copy(X_spd)
-        
-        # move away from covariance matrices
-        X_off = X_spd - dx
-        
-        # project onto smi positive definite amtrices
-        eigval, eigvec = np.linalg.eigh(X_off)
-        X_spd = (eigvec*np.maximum(eigval,1e-7)).dot(eigvec.T)
-        
-        # find next step length
-        dx = X_spd - X_off
-        
-        # project onto covariance matrices
-        np.fill_diagonal(X_spd, 1)
-        rel_diff = np.linalg.norm(X_spd - X_spd_old)/np.linalg.norm(X_spd)
-        
-    return X_spd
-
 # traits relevant for pyhtoplankton growth rates
 phyto_traits = np.array(["size_P", "mu_P", "k_n", "k_p", "k_l",
                          "c_n", "c_p", "a","e_P", "R_P"])
@@ -145,7 +108,7 @@ for i,trait in enumerate(phyto_traits):
 def nan_linreg(x,y):
     x,y = raw_data[x].values, raw_data[y].values
     ind = np.isfinite(x*y)
-    if np.sum(ind) == 0:
+    if np.sum(ind) <= 1:
         return [0, 0, 0, 0, np.inf]
     return linregress(x[ind], y[ind])
 
@@ -156,6 +119,15 @@ s, i, r, p, std = nan_linreg("mu_P", "k_l")
 allo_scal["k_l"] = allo_scal["mu_P"]*s
 allo_scal["e_P"] = nan_linreg("size_P", "e_P")[0]
 
+# check allometric scaling
+fac = 1.96
+allo_scal_emp = {}
+for key in phyto_traits:
+    s, i, r, p, std = nan_linreg("size_P", key)
+    if not (s-fac*std <= allo_scal[key] <= s+fac*std):
+        allo_scal[key] = s
+    allo_scal_emp[key] = [s-fac*std, s+fac*std]
+
 for i,trait in enumerate(phyto_traits):
     corr_theory.loc[trait, trait] = 1
     for j, traitj in enumerate(phyto_traits):
@@ -165,28 +137,71 @@ for i,trait in enumerate(phyto_traits):
                         /(std_phyto[trait]*std_phyto[traitj])).values
             n_measurments.loc[trait, traitj] = np.sum(np.isfinite(
                                         raw_data[trait]*raw_data[traitj]))
-            
+
+corr_phyto = corr_theory.copy()
+"""
+def proj_cov(A, tol = 1e-10, max_iter = 100):
+    '''
+    Reference:  N. J. Higham, Computing the nearest correlation
+    matrix---A problem from finance. IMA J. Numer. Anal.,
+    22(3):329-343, 2002.
+    '''
+
+    dx = np.zeros(np.shape(A))
+    # x projected onto covariance matrix space
+    X_spd = np.copy(A)
+    # relative difference between last and this iteration
+    rel_diff = np.inf
+    iteration = 1
+    while rel_diff > tol:
+        iteration +=1
+        # avoid infinite loop
+        if iteration > max_iter:
+            raise RuntimeError
+        # copy old value
+        X_spd_old = np.copy(X_spd)
+        
+        # move away from covariance matrices
+        X_off = X_spd - dx
+        
+        # project onto smi positive definite amtrices
+        eigval, eigvec = np.linalg.eigh(X_off)
+        X_spd = (eigvec*np.maximum(eigval,1e-7)).dot(eigvec.T)
+        
+        # find next step length
+        dx = X_spd - X_off
+        
+        # project onto covariance matrices
+        np.fill_diagonal(X_spd, 1)
+        rel_diff = np.linalg.norm(X_spd - X_spd_old)/np.linalg.norm(X_spd)
+        
+    return X_spd
+
 with warnings.catch_warnings(record = True):           
     # compute confidence interval of correlation based on empirical measurments
     corr_empirical = raw_data.corr()
     # convert to fisher z'
     fisher_z = np.arctanh(corr_empirical.values)
     # confidence interval
-    alpha = 1.96 # 95% confidence 
-    alpha = np.array([-alpha, alpha]).reshape(-1,1,1)
+    # 95% confidence 
+    alpha = np.array([-fac, fac]).reshape(-1,1,1)
     fisher_confidence = fisher_z + alpha/np.sqrt(n_measurments.values - 3)
     corr_confidence = np.tanh(fisher_confidence)
     
     # where not in confidence interval
     corr_phyto = corr_theory.copy()
-    ind = (corr_phyto<corr_confidence[0]) | (corr_phyto>corr_confidence[1])
-    corr_phyto[ind] = corr_empirical
+    ind_di = (corr_phyto<corr_confidence[0]) | (corr_phyto>corr_confidence[1])
+    # correlation between size_P has already been checked
+    ind_di["size_P"] = False
+    ind_di.loc["size_P",:] = False
+    #ind_di.loc["mu_P", ]
+    corr_phyto[ind_di] = corr_empirical
     
     
 # this matrix might not be positive semidefinite (i.e. not a covariance matrix)
 # find the closest covariance matrix (measured in Frobenius norm)
 corr_phyto = pd.DataFrame(proj_cov(corr_phyto), index = phyto_traits,
-                          columns = phyto_traits)
+                          columns = phyto_traits)"""
 
 # the base covariance matrix of phytoplankton
 cov_phyto = corr_phyto*std_phyto.values*std_phyto.values[0,:,np.newaxis]
@@ -243,24 +258,32 @@ if __name__ == "__main__":
     from generate_plankton import generate_base_traits
     
     traits = generate_phytoplankton_traits(10,100)
-    traits = generate_base_traits(10,100)
+    traits = generate_base_traits(10,1000)
     traits = {key: np.log(traits[key].flatten()) for key in traits.keys()}
     traits = pd.DataFrame(traits, columns = phyto_traits)
     
     fig, ax = plt.subplots(len(traits.keys()), len(traits.keys()),
                                figsize = (12,12), sharex = "col", sharey = "row")
+    
+    name = ["Size", "Growth rate\n$\mu_P$", "Half-\nsaturation N\n$k_n$",
+            "Half-\nsaturation P\n$k_p$", "Half-\nsaturation\nlight\n$k_l$",
+            "N uptake\n$c_n$", "P uptake\n$c_p$", "Absorption\n$a$",
+            "Edibility\n$e_P$", "Resource\ncontent\n$R_P$"]
     bins = 10
     for i,keyi in enumerate(phyto_traits):
-        ax[-1,i].set_xlabel(keyi)
-        ax[i,0].set_ylabel(keyi)
         for j, keyj in enumerate(phyto_traits):               
             if i<j:
                 
-                ax[j,i].scatter(traits[keyi], traits[keyj], s = 1,
+                ax[j,i].scatter(traits[keyi][:300], traits[keyj][:300], s = 5,
                             alpha = 0.1, color = "blue")
                 
                 ax[j,i].scatter(raw_data[keyi], raw_data[keyj],
                                     s = 3, color = "orange")
+        
+            else:
+                ax[j,i].set_frame_on(False)
+                ax[j,i].tick_params(axis = "y", colors = "None")
+                ax[j,i].tick_params(axis = "x", colors = "None")
         
         # plot histogram
 
@@ -270,9 +293,15 @@ if __name__ == "__main__":
         ax_hist.hist(traits[keyi], bins, density = True, color = "blue")
         ax_hist.set_xticklabels([])
         ax_hist.set_yticklabels([])
+        ax_hist.set_title(name[i])
         ax_hist.hist(raw_data[keyi], bins, density = True,
                      alpha = 0.5, color = "orange")
             
         ax[-1,-1].set_xlim(ax[-1,0].get_ylim())
+        
+        ax[i,0].set_ylabel(name[i], rotation = 0,
+                           ha = "right", va = "center")
+        ax[-1,i].set_xticks(np.round(np.nanpercentile(traits[keyi],[5,95]),1))
+        ax[i,0].set_yticks(np.round(np.nanpercentile(traits[keyi],[5,95]),1))
 
     fig.savefig("Figure_phytoplankton_traits.pdf")

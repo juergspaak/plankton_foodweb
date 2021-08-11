@@ -171,7 +171,7 @@ corr_zoop.loc["k_Z", "mu_Z"] = (std_zoop["mu_Z"]/std_zoop["k_Z"]).values
 corr_zoop.loc["mu_Z", "k_Z"] = (std_zoop["mu_Z"]/std_zoop["k_Z"]).values
 
 # increase growth rate of zooplankton, because of couple holling types
-mean_zoop["mu_Z"] += np.log(4)
+mean_zoop["mu_Z"] += np.log(10)
 # the base covariance matrix of phytoplankton
 cov_base = corr_zoop*std_zoop.values*std_zoop.values[0,:,np.newaxis]
 
@@ -225,8 +225,8 @@ if __name__ == "__main__":
 
     # generate communities
     n_coms = 5000
-    r_phyto = 2
-    traits = gp.generate_plankton(r_phyto, n_coms)
+    r_phyto = 1
+    traits = gp.generate_plankton(r_phyto, n_coms, evolved_zoop = False)
 
     env = gp.generate_env(n_coms)
     
@@ -238,8 +238,8 @@ if __name__ == "__main__":
 
     traits = np.array([traits["size_Z"], traits["mu_Z_effective"],
                        traits["c_Z"],  traits["m_Z"], traits["k_Z"]])
-    trait_names = ["Size", "Growth", "Clearance", "Mortality",
-                   "Half\nsaturation"]
+    trait_names = ["Size", "Growth\n$\mu_Z$", "Clearance\n$c_Z$", "Mortality\n$m_Z$",
+                   "Half\nsaturation\n$k_Z$"]
     with warnings.catch_warnings(record = True):
         traits = np.log(traits.reshape(len(trait_names),-1)).T
     bins = 15
@@ -250,18 +250,20 @@ if __name__ == "__main__":
     
     fs = 16
     s = 5
+    
     for i in range(n):
         for j in range(n):
             if i>j:
-                ax[i,j].scatter(traits[:,j], traits[:,i], s = 2, alpha = 0.1,
+                ax[i,j].scatter(traits[:300,j], traits[:300,i], s = 5,
+                                alpha = 0.1,
                                 color = "blue")
                 ax[i,j].scatter(raw_data[zoop_traits[j]],
                                 raw_data[zoop_traits[i]],
                                     s = 3, color = "orange")
-            if j>i:
+            else:
                 ax[i,j].set_frame_on(False)
-            ax[i,j].set_xticks([])
-            ax[i,j].set_yticks([])
+                ax[i,j].tick_params(axis = "y", colors = "None")
+                ax[i,j].tick_params(axis = "x", colors = "None")
         ax_hist = fig.add_subplot(n,n,1 + (n+1)*i)
         ax_hist.hist(traits[:,i], bins, density = True, color = "blue")
         ax_hist.set_xticklabels([])
@@ -271,11 +273,16 @@ if __name__ == "__main__":
             ax_hist.hist(raw_data[zoop_traits[i]], bins, density = True,
                     alpha = 0.5, color = "orange")
         ax[i,0].set_ylabel(trait_names[i], fontsize = fs, rotation = 0,
-                           ha = "right")
+                           ha = "right", va = "center")
         ax[-1,i].set_xlabel(trait_names[i], fontsize = fs)
+        
+        ax[-1,i].set_xticks(np.round(np.nanpercentile(traits[:,i],[5,95]),1))
+        ax[i,0].set_yticks(np.round(np.nanpercentile(traits[:,i],[5,95]),1))
+        
+        
     
     
     ax[0,0].set_ylim(ax[0,0].get_xlim())
     ax[-1,-1].set_xlim(ax[-1,-1].get_ylim())
 
-    fig.savefig("Figure_zooplankton_traits.png")
+    fig.savefig("Figure_zooplankton_traits.pdf")

@@ -4,7 +4,7 @@ import pandas as pd
 from scipy.optimize import brentq
 
 import generate_plankton as gp
-
+"""
 n_spec_max = 4
 n_specs = np.arange(1, n_spec_max + 1)
 n_coms = int(1e4)
@@ -103,7 +103,7 @@ for i in range(n_prec):
     div.append(np.sum(n_specs*div)/sum(div))
     div_zoo.loc[i, ["r_spec_{}".format(2*i) for i in n_specs] + ["mean"]] = div
     print(i, np.linalg.det(corr_zoo[i]))
-
+"""
 
 fig, ax = plt.subplots(2,3, sharey = True)
 mean = div_phyto.loc[div_phyto.exp == 1, "mean"]
@@ -134,4 +134,19 @@ ax[1,2].set_xlabel("Exponent")
 for a in ax.flatten():
     a.axhline(mean.values, color = "red")
 
-#fig.savefig("Figure_all_tradeoffs.pdf")
+fig.savefig("Figure_all_tradeoffs.pdf")
+
+###############################################################################
+fig, ax = plt.subplots(2,1)
+ax[0].plot(div_phyto.eigv/len(gp.pt.phyto_traits), div_phyto["mean"], '.')
+ax[0].axvline(np.amax(np.linalg.eigvalsh(gp.pt.corr_phyto))/len(gp.pt.phyto_traits), color = "k")
+ax[1].plot(div_zoo.eigv/len(gp.zt.zoop_traits), div_zoo["mean"], '.')
+ax[1].axvline(np.amax(np.linalg.eigvalsh(gp.zt.corr_zoop))/len(gp.zt.zoop_traits), color = "k")
+ax[1].set_xlabel("Maximum eigenvalue")
+
+ax[0].set_title("Change of phytoplankton correlation")
+ax[1].set_title("Change of zooplankton correlation")
+ax[0].set_ylabel("Species richeness")
+ax[1].set_ylabel("Species richness")
+fig.tight_layout()
+fig.savefig("Figure_ap_all_correlations.pdf")

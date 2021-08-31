@@ -7,16 +7,16 @@ import generate_plankton as gp
 
 n_spec_max = 4
 n_specs = np.arange(1, n_spec_max + 1)
-n_coms = int(10e4)
+n_coms = int(1e4)
 
 trait_combs = np.append(gp.pt.phyto_traits, gp.zt.zoop_traits)
 trait_combs = [["Ref"], ["s_zp"], ["h_zp"]] + [[trait] for trait in trait_combs]
 trait_combs = np.array(trait_combs, dtype = "object")
 
-div_phyto = pd.DataFrame(np.nan, index = np.append(gp.pt.phyto_traits, "var"),
+div_phyto = pd.DataFrame(np.nan, index = gp.pt.phyto_traits,
                          columns = gp.pt.phyto_traits)
 corr_phy_mm = div_phyto.copy()
-div_zoop = pd.DataFrame(np.nan, index = np.append(gp.zt.zoop_traits, "var"),
+div_zoop = pd.DataFrame(np.nan, index = gp.zt.zoop_traits,
                         columns = gp.zt.zoop_traits)
 corr_zoo_mm = div_zoop.copy()
 div_all = pd.DataFrame(np.nan, index = ["r_spec_{}".format(2*i)
@@ -35,9 +35,21 @@ for i in range(20):
         if n_spec <=0:
             continue
         # generate phytoplankton and 
-        traits, env = gp.generate_communities(n_spec,n_coms,
+        traits = gp.generate_plankton(n_spec,n_coms,
                                       evolved_zoop=True)
-        div.append(traits["n_coms"])
+
+        env = gp.generate_env(n_coms)
+        
+        # remove communities in which not all phytoplankton can survive
+        traits = gp.phytoplankton_equilibrium(traits, env)
+        ind = np.all(np.isfinite(traits["N_star_P_res"]), axis = 1)
+        traits, env, ind = gp.select_i(traits, env, ind)
+        
+        # compute equilibrium conditions
+        traits = gp.community_equilibrium(traits, env)
+        div.append(np.sum(np.all(traits["N_star_Z"]>0, axis = 1) &
+                          np.all(traits["N_star_P"]>0, axis = 1))
+                   /len(traits["mu_P"]))
     div.append(np.sum(n_specs*div)/sum(div))
     div_all["ref" + str(i)] = div
     print(i)
@@ -45,30 +57,6 @@ for i in range(20):
 ref_id = div_all.columns
 
 for i, key in enumerate(div_phyto.columns):
-    div = []
-    for n_spec in n_specs:
-        if n_spec <=0:
-            continue
-        # generate phytoplankton and 
-        traits, env = gp.generate_communities(n_spec,n_coms,
-                                      evolved_zoop=True, const_traits = [key])
-        div.append(traits["n_coms"])
-    div.append(np.sum(n_specs*div)/sum(div))
-    div_all[key] = div
-    div_phyto.loc[key,key] = div[-1]
-    
-    # increased variance
-    div = []
-    for n_spec in n_specs:
-        if n_spec <=0:
-            continue
-        # generate phytoplankton and 
-        traits, env = gp.generate_communities(n_spec,n_coms,
-                                      evolved_zoop=True, diff_std = {key:2})
-        div.append(traits["n_coms"])
-    div.append(np.sum(n_specs*div)/sum(div))
-    div_all[key] = div
-    div_phyto.loc["var",key] = div[-1]
     
     for j,keyj in enumerate(div_phyto.columns):
         if key == keyj:
@@ -82,9 +70,21 @@ for i, key in enumerate(div_phyto.columns):
             if n_spec <=0:
                 continue
             # generate phytoplankton and 
-            traits, env = gp.generate_communities(n_spec,n_coms,
-                                    evolved_zoop=True, tradeoffs = tradeoff)
-            div.append(traits["n_coms"])
+            traits = gp.generate_plankton(n_spec,n_coms,
+                                      evolved_zoop=True, tradeoffs = tradeoff)
+
+            env = gp.generate_env(n_coms)
+            
+            # remove communities in which not all phytoplankton can survive
+            traits = gp.phytoplankton_equilibrium(traits, env)
+            ind = np.all(np.isfinite(traits["N_star_P_res"]), axis = 1)
+            traits, env, ind = gp.select_i(traits, env, ind)
+            
+            # compute equilibrium conditions
+            traits = gp.community_equilibrium(traits, env)
+            div.append(np.sum(np.all(traits["N_star_Z"]>0, axis = 1) &
+                              np.all(traits["N_star_P"]>0, axis = 1))
+                       /len(traits["mu_P"]))
 
         div.append(np.sum(n_specs*div)/sum(div))
         div_all[key+":"+keyj] = div
@@ -95,30 +95,6 @@ for i, key in enumerate(div_phyto.columns):
 # zooplankton traits
 
 for i, key in enumerate(div_zoop.columns):
-    div = []
-    for n_spec in n_specs:
-        if n_spec <=0:
-            continue
-        # generate phytoplankton and 
-        traits, env = gp.generate_communities(n_spec,n_coms,
-                                      evolved_zoop=True, const_traits = [key])
-        div.append(traits["n_coms"])
-    div.append(np.sum(n_specs*div)/sum(div))
-    div_all[key] = div
-    div_zoop.loc[key,key] = div[-1]
-    
-    # increased variance
-    div = []
-    for n_spec in n_specs:
-        if n_spec <=0:
-            continue
-        # generate phytoplankton and 
-        traits, env = gp.generate_communities(n_spec,n_coms,
-                                      evolved_zoop=True, diff_std = {key:2})
-        div.append(traits["n_coms"])
-    div.append(np.sum(n_specs*div)/sum(div))
-    div_all[key] = div
-    div_zoop.loc["var",key] = div[-1]
     
     for j,keyj in enumerate(div_zoop.columns):
         if key == keyj:
@@ -132,9 +108,21 @@ for i, key in enumerate(div_zoop.columns):
             if n_spec <=0:
                 continue
             # generate phytoplankton and 
-            traits, env = gp.generate_communities(n_spec,n_coms,
-                                    evolved_zoop=True, tradeoffs = tradeoff)
-            div.append(traits["n_coms"])
+            traits = gp.generate_plankton(n_spec,n_coms,
+                                      evolved_zoop=True, tradeoffs = tradeoff)
+
+            env = gp.generate_env(n_coms)
+            
+            # remove communities in which not all phytoplankton can survive
+            traits = gp.phytoplankton_equilibrium(traits, env)
+            ind = np.all(np.isfinite(traits["N_star_P_res"]), axis = 1)
+            traits, env, ind = gp.select_i(traits, env, ind)
+            
+            # compute equilibrium conditions
+            traits = gp.community_equilibrium(traits, env)
+            div.append(np.sum(np.all(traits["N_star_Z"]>0, axis = 1) &
+                              np.all(traits["N_star_P"]>0, axis = 1))
+                       /len(traits["mu_P"]))
 
         div.append(np.sum(n_specs*div)/sum(div))
         div_all[key+":"+keyj] = div
@@ -187,4 +175,4 @@ ax[1,0].set_xticklabels(div_zoop.columns.values)
 ax[1,0].set_yticks(range(len(div_zoop.columns.values)))
 ax[1,0].set_yticklabels(div_zoop.columns.values)
 
-fig.savefig("Figure_prospect_const_tradeoffs.pdf")
+fig.savefig("Figure_effect_individual_tradeoffs.pdf")

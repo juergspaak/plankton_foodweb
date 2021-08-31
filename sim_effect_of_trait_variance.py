@@ -4,7 +4,7 @@ import pandas as pd
 from scipy.optimize import brentq
 
 import generate_plankton as gp
-
+"""
 n_spec_max = 4
 n_specs = np.arange(1, n_spec_max + 1)
 n_coms = int(1e4)
@@ -24,20 +24,6 @@ div_combined = pd.DataFrame(np.nan, index = np.arange(n_prec),
 corr_zoo_mm = div_zoop.copy()
 div_all = pd.DataFrame(np.nan, index = ["r_spec_{}".format(2*i)
                                 for i in n_specs] + ["mean"], columns = [])
-"""
-for i in range(5):
-    div = []
-    for n_spec in n_specs:
-        if n_spec <=0:
-            continue
-        # generate phytoplankton and 
-        traits, env = gp.generate_communities(n_spec,n_coms,
-                                      evolved_zoop=True)
-        div.append(traits["n_coms"])
-    div.append(np.sum(n_specs*div)/sum(div))
-    div_all["ref" + str(i)] = div
-    print(i)
-#"""
 
 ref_id = div_all.columns
 
@@ -125,7 +111,8 @@ for i, key in enumerate(trait_combs):
         div.append(np.sum(n_specs*div)/sum(div))
         div_all[key + str(j)] = div
         div_combined.loc[j,key] = div[-1]
-
+"""
+ref_id = div_all.columns[[key[-1] == str(n_prec//2) for key in div_all.columns]]
 m_ref = np.mean(div_all.loc["mean", ref_id])
 std_ref = np.std(div_all.loc["mean", ref_id])
 var2 = var.copy()
@@ -155,4 +142,5 @@ ax[2].axvline(1, color = "k")
 ax[2].set_xticks([0.5,1,2])
 ax[2].set_xticklabels([0.5, 1,2])
 
-fig.savefig("Figure_dependence_on_variance.pdf")
+fig.savefig("Figure_effect_of_trait_variance.pdf")
+

@@ -5,4 +5,5 @@ __pycache__/
 data/
 empirical_data/
 
+*.npy
 *.csv

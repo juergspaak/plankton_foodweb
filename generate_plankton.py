@@ -64,7 +64,7 @@ def generate_env(n_coms, I_in = [50,200], P = [5,20], N = [10,100],
 
 def generate_base_traits(r_spec = 1, n_com = 100, std = None, diff_std = {},
                                   corr = None, phyto = True, size = None,
-                                  const_traits = [], tradeoffs = {}):
+                                  diff_mean = {}, tradeoffs = {}):
     # generate random size if size is not given
     if size is None:
         if phyto:
@@ -88,6 +88,8 @@ def generate_base_traits(r_spec = 1, n_com = 100, std = None, diff_std = {},
     for key in diff_std.keys():
         if key in std.columns:
             std[key] *= diff_std[key]
+            
+    
     
     # change tradeoffs between traits
     for key in tradeoffs.keys():
@@ -98,8 +100,12 @@ def generate_base_traits(r_spec = 1, n_com = 100, std = None, diff_std = {},
 
 
     # mean trait values per community
-    mean = pt.mean_phyto.values if phyto else zt.mean_zoop.values
-    
+    mean = pt.mean_phyto.copy() if phyto else zt.mean_zoop.copy()
+    # change mean of certain traits
+    for key in diff_mean.keys():
+        if key in mean.columns:
+            mean[key] += diff_mean[key]
+    mean = mean.values
    
     # combine corrlation and standard deviation into covariance matrix
     try:
@@ -118,23 +124,11 @@ def generate_base_traits(r_spec = 1, n_com = 100, std = None, diff_std = {},
     trait_names = pt.phyto_traits if phyto else zt.zoop_traits
     for i, trait in enumerate(trait_names[1:]):
         trait_dict[trait] = traits[...,i]
-        
-    for key in const_traits:
-        try:
-            trait_dict[key][:] = np.exp(np.random.normal(pt.mean_phyto[key],
-                                            pt.std_phyto[key], (n_com,1)))
-        except KeyError:
-            pass
-        try:
-            trait_dict[key][:] = np.exp(np.random.normal(zt.mean_zoop[key],
-                                            zt.std_zoop[key], (n_com,1)))
-        except KeyError:
-            pass
     
     return trait_dict
 
 def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
-                      size_P = None, const_traits = [], tradeoffs = {},
+                      size_P = None, diff_mean = {}, tradeoffs = {},
                       size_Z = None, diff_std = {}, corr_phyto = None, corr_zoo = None):
     """ Generate traits of plankton communities
     
@@ -149,7 +143,7 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
     """
     
     traits_phyto = generate_base_traits(r_phyto, n_coms, size = size_P,
-                        tradeoffs = tradeoffs, const_traits = const_traits,
+                        tradeoffs = tradeoffs, diff_mean = diff_mean,
                         diff_std = diff_std, corr = corr_phyto)
 
     if evolved_zoop:
@@ -160,7 +154,7 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
         traits_zoop = generate_base_traits(r_phyto, n_coms, phyto = False,
                                            size = size_Z, diff_std = diff_std,
                                            tradeoffs = tradeoffs, corr = corr_zoo,
-                                           const_traits = const_traits)
+                                           diff_mean = diff_mean)
         r_zoop = r_phyto
     else: 
         if r_zoop is None:
@@ -168,7 +162,7 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
         traits_zoop = generate_base_traits(r_zoop, n_coms, phyto = False,
                                         size = size_Z, corr = corr_zoo,
                                         tradeoffs = tradeoffs,
-                                        const_traits = const_traits)    
+                                        diff_mean = diff_mean)    
     
     traits_phyto.update(traits_zoop)
     traits = traits_phyto
@@ -202,11 +196,9 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
                 +1*(np.log(traits["size_P"][:,np.newaxis])-pt.mean_phyto["size_P"].values))
     if "h_zp" in diff_std.keys():
         traits["h_zp"] *= diff_std["h_zp"]
+    if "h_zp" in diff_mean.keys():
+        h_zp_mean += diff_mean["h_zp"]
     traits["h_zp"] = np.exp(h_zp_mean.values + traits["h_zp"])
-    
-    if "h_zp" in const_traits:
-        traits["h_zp"][:] = np.exp(np.mean(np.log(traits["h_zp"]),
-                                           axis = (1,2),keepdims=True))
     
     # add selectivity
     # differences in traits
@@ -219,11 +211,7 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
         traits["s_zp"] = traits["s_zp_raw"]/np.sum(traits["s_zp_raw"],
                                                    axis = -1, keepdims=True)
         
-        traits["s_zp"][np.isnan(traits["s_zp"])] = 0
-    if "s_zp" in const_traits:
-        traits["s_zp"][:] = 1
-        
-    
+        traits["s_zp"][np.isnan(traits["s_zp"])] = 0   
 
     return traits
 
@@ -368,11 +356,11 @@ def select_keys(traits):
     return sel_keys
 
 def generate_communities(r_phyto, n_coms, evolved_zoop = True, r_zoo = None,
-                         monoculture_equi = True, size_P = None, const_traits = [],
+                         monoculture_equi = True, size_P = None, diff_mean = {},
                          tradeoffs = {}, size_Z = None, diff_std = {}, corr_phyto = None,
                          corr_zoo = None):
     traits = generate_plankton(r_phyto, n_coms, r_zoo, evolved_zoop=evolved_zoop,
-                               size_P = size_P, const_traits = const_traits, tradeoffs = tradeoffs,
+                               size_P = size_P, diff_mean = diff_mean, tradeoffs = tradeoffs,
                                size_Z = size_Z, diff_std = diff_std, corr_phyto = corr_phyto,
                                corr_zoo = corr_zoo)
     
@@ -404,7 +392,7 @@ def select_i(traits, env, i = None):
     env_i = {key: env[key][i] for key in env.keys()}
     return tr_i, env_i,i
 
-if __name__ == "__main__":
+if __name__ == "__main__" and False:
     import matplotlib.pyplot as plt
     
     # generate phytoplankton communities

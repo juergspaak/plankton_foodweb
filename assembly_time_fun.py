@@ -42,8 +42,11 @@ def select_survivors(ti, ind_phyto, ind_zoo):
 
 
 def assembly_richness(traits, env, time_org = np.array([0, 365]),
-                      plot_until = 3):
+                      plot_until = 3, ret_all = True):
     richness = np.empty((traits["n_coms"],2))
+    id_survive = np.full((traits["n_coms"], 2, traits["r_phyto"]),
+                         False, dtype = bool)
+    dens_equi = np.full(id_survive.shape, np.nan)
     for i in range(traits["n_coms"]):
         
         if i < plot_until:
@@ -75,6 +78,12 @@ def assembly_richness(traits, env, time_org = np.array([0, 365]),
 
         
         richness[i] = len(ind_phyto), len(ind_zoo)
+        id_survive[i,0,ind_phyto] = True
+        id_survive[i,1,ind_zoo] = True
+        #dens_equi[i,0,ind_phyto] = np.nanmedian(sol.y)
+    if ret_all:
+        return richness, id_survive
+        
     return richness
 
 if __name__ == "__main__":     

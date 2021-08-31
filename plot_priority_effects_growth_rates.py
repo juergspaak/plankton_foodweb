@@ -59,3 +59,5 @@ ax[2].plot(Z, zoop_growth[:,1], "b")
 ax[2].axhline(0, color = "k")
 ax[2].set_ylabel("Zoop_growth")
 ax[2].set_title("No equilibrium density")
+
+fig.savefig("Figure_priority_effects.pdf")

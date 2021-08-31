@@ -6,10 +6,10 @@ import zoop_traits as zt
 
 r_phyto = 30
 n_coms = 100
-const_traits = ["k_n", "k_Z"]
 tradeoffs = {"m_Z:mu_Z": -0.6, "c_n:c_p": 0.5}
 diff_std = {"a":2, "c_Z": 2}
-traits_const = gp.generate_plankton(r_phyto, n_coms, const_traits = const_traits,
+diff_mean = {"mu_P": 2, "k_Z": 2}
+traits_const = gp.generate_plankton(r_phyto, n_coms, diff_mean = diff_mean,
                                     tradeoffs = tradeoffs, diff_std = diff_std)
 
 traits = gp.generate_plankton(r_phyto, n_coms)

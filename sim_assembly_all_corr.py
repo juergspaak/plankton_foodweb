@@ -18,7 +18,9 @@ corr_phyto = np.sign(corr_phyto)*np.abs(corr_phyto)**exp.reshape(-1,1,1)
 corr_phyto[:, np.arange(len(gp.pt.corr_phyto)), np.arange(len(gp.pt.corr_phyto))] = 1
 
 
-rich_phyto = np.empty((n_prec, n_coms, 2))
+rich_phyto = np.full((n_prec, n_coms, 2), np.nan)
+res_phyto = np.full((n_prec, n_coms, 3), np.nan)
+dens_phyto = np.full((n_prec, n_coms, 2), np.nan)
 tot_start = timer()
 for i in range(n_prec):
     start = timer()
@@ -26,27 +28,42 @@ for i in range(n_prec):
     env = gp.generate_env(n_coms)
     traits = gp.phytoplankton_equilibrium(traits, env)
     
-    rich_phyto[i] = assembly_richness(traits, env, plot_until = 0)
+    # simulate densities
+    richness, id_survive, res_equi, dens_equi = assembly_richness(
+                    traits, env, plot_until = 0, ret_all = True)
+    rich_phyto[i] = richness
+    res_phyto[i] = res_equi
+    dens_phyto[i] = np.sum(dens_equi, axis = -1)
     print(i,np.mean(rich_phyto[i], axis = 0), timer()-start, timer()-tot_start)
         
+np.savez("Data_assembly_all_corr_phyto", rich = rich_phyto, res = res_phyto, dens = dens_phyto)
+
 
 exp = 10**np.linspace(-0.1,1.5,n_prec)
 corr_zoo = gp.zt.corr_zoop.values
 corr_zoo = np.sign(corr_zoo)*np.abs(corr_zoo)**exp.reshape(-1,1,1)
 corr_zoo[:, np.arange(len(gp.zt.corr_zoop)), np.arange(len(gp.zt.corr_zoop))] = 1
 
-rich_zoo = np.empty((n_prec, n_coms, 2))
+rich_zoo = np.full((n_prec, n_coms, 2), np.nan)
+res_zoo = np.full((n_prec, n_coms, 3), np.nan)
+dens_zoo = np.full((n_prec, n_coms, 2), np.nan)
+
 for i in range(len(rich_zoo)):
     start = timer()
     traits = gp.generate_plankton(5, n_coms, corr_zoo = corr_zoo[i])
     env = gp.generate_env(n_coms)
     traits = gp.phytoplankton_equilibrium(traits, env)
     
-    rich_zoo[i] = assembly_richness(traits, env)
+    richness, id_survive, res_equi, dens_equi = assembly_richness(
+                    traits, env, plot_until = 0, ret_all = True)
+    rich_zoo[i] = richness
+    res_zoo[i] = res_equi
+    dens_zoo[i] = np.sum(dens_equi, axis = -1)
     print(i, np.mean(rich_zoo[i], axis = 0), timer()-start)
 
 #"""
-
+np.savez("Data_assembly_all_corr_zoo", rich = rich_zoo, res = res_zoo,
+         dens = dens_zoo)
 
 fig, ax = plt.subplots(2,2, sharex = True, sharey = True, figsize = (13,13))
 

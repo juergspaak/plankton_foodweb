@@ -1,7 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-from scipy.optimize import brentq
 
 from assembly_time_fun import assembly_richness
 import generate_plankton as gp
@@ -48,6 +45,7 @@ for j, trait in enumerate(const_traits):
         print(i,j,add_var[i], trait, np.mean(rich_all[j,i], axis = 0),
               timer()-start, timer()-all_start)
 
-    np.savez("Data_assembly_mean2", rich = rich_all, res = res_all,
+    np.savez("Data_assembly_mean2", rich = rich_all, N = res_all[...,1],
+             P = res_all[...,0], L = res_all[...,2],
              dens = np.log(dens_all),
          traits = const_traits, change_traits = add_var)

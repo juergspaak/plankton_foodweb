@@ -42,7 +42,7 @@ def grazing(N_phyto,t):
 
 def per_cap_plankton_growth(N, t, env):
     N = N.copy()
-    N[N<1e-8] = 1e-8
+    N[N<1e-8] = 1e-8 # species with too small densities cause numerical problems
     # separate densities into phytoplankton and zooplankton
     res = N[...,:2] # nitrogen and phosphorus concentration
     N_phyto = N[...,2:(t["r_phyto"] + 2)]
@@ -72,7 +72,7 @@ def plankton_growth(N, t, env):
 def convert_ode_to_log(logN, t, env):
     with warnings.catch_warnings(record = True):
         N = np.exp(logN)
-        N[N>1e20] = 1e20
+        N[N>1e20] = 1e20 # prevent overflow
     # dlog(N)/dt = 1/N dN/dt
     return per_cap_plankton_growth(N, t, env)
 

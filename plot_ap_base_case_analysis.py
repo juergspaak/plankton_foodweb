@@ -1,11 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
-from scipy.optimize import brentq
 
 from assembly_time_fun import assembly_richness
 import generate_plankton as gp
-from timeit import default_timer as timer
 
 
 n_coms = 100

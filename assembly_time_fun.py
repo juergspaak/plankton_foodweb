@@ -14,8 +14,8 @@ def evolve_time(N, ti, envi, time):
     p = 0.5
     t_cutoff = p*time[0] + (1-p)*time[-1]
     with warnings.catch_warnings(record = True):
-        dens_phyto = np.exp(sol.y[2:(2+ti["r_phyto"]),sol.t>0.8*time[-1]])
-        dens_zoop = np.exp(sol.y[2+ti["r_phyto"]:, sol.t>0.8*time[-1]])
+        dens_phyto = np.exp(sol.y[2:(2+ti["r_phyto"]),sol.t>t_cutoff])
+        dens_zoop = np.exp(sol.y[2+ti["r_phyto"]:, sol.t>t_cutoff])
     
     # both phytoplankton and zooplankton might be died out, avoid zero division
     with warnings.catch_warnings(record = True):
@@ -48,7 +48,7 @@ def select_survivors(ti, ind_phyto, ind_zoo):
 
 
 def assembly_richness(traits, env, time_org = np.array([0, 365]),
-                      plot_until = 3, ret_all = True):
+                      plot_until = 0, ret_all = True):
     richness = np.empty((traits["n_coms"],2))
     colors = viridis(np.linspace(0,1,traits["r_phyto"]))
     id_survive = np.full((traits["n_coms"], 2, traits["r_phyto"]),
@@ -56,7 +56,6 @@ def assembly_richness(traits, env, time_org = np.array([0, 365]),
     dens_equi = np.full(id_survive.shape, np.nan)
     res_equi = np.full((traits["n_coms"], 3), np.nan)
     for i in range(traits["n_coms"]):
-        
         if i < plot_until:
             fig, ax = plt.subplots(3, sharex = True)
             ax[0].set_title(i)
@@ -116,14 +115,14 @@ def assembly_richness(traits, env, time_org = np.array([0, 365]),
         
         # all species might have died out, mean of empty slice
         with warnings.catch_warnings(record = True):
-            mean_dens = np.exp(np.mean(sol.y, axis = -1))
+            mean_dens = np.mean(np.exp(sol.y), axis = -1)
         res_equi[i,:2] = mean_dens[:2]
         dens_equi[i,0, ind_phyto] = mean_dens[2:(2 + len(ind_phyto))]
         dens_equi[i,1, ind_zoo] = mean_dens[(2 + len(ind_phyto)):]
         
-        I_out = envi["I_in"]*(1-np.exp(-envi["zm"]*
+        I_out = envi["I_in"]*np.exp(-envi["zm"]*
                np.sum(ti["a"][ind_phyto,np.newaxis]*
-                      np.exp(sol.y[2:(2+len(ind_phyto))]), axis = 0)))
+                      np.exp(sol.y[2:(2+len(ind_phyto))]), axis = 0))
         res_equi[i,-1] = np.mean(I_out)
         if i < plot_until:
             
@@ -132,7 +131,6 @@ def assembly_richness(traits, env, time_org = np.array([0, 365]),
             ax[1].set_title(str(ind_phyto))
             ax[2].set_title(str(ind_zoo))
             plt.show()
-        #dens_equi[i,0,ind_phyto] = np.nanmedian(sol.y)
     if ret_all:
         return richness, id_survive, res_equi, dens_equi
         

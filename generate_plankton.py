@@ -55,11 +55,11 @@ env = {"I_in": 100,
 
 def generate_env(n_coms, I_in = [50,200], P = [5,20], N = [10,100],
                  d = [0.05,0.2], zm = [10,100]):
-    env = {"I_in": np.random.uniform(*I_in, (n_coms,1)),
-                   "P": np.random.uniform(*P, (n_coms, 1)),
-                   "N": np.random.uniform(*N, (n_coms,1)),
-                   "d": np.random.uniform(*d, (n_coms,1)),
-                   "zm": np.random.uniform(*zm, (n_coms,1))}
+    env = {"I_in": np.random.uniform(*I_in, (n_coms)),
+                   "P": np.random.uniform(*P, (n_coms)),
+                   "N": np.random.uniform(*N, (n_coms)),
+                   "d": np.random.uniform(*d, (n_coms)),
+                   "zm": np.random.uniform(*zm, (n_coms))}
     return env
 
 def generate_base_traits(r_spec = 1, n_com = 100, std = None, diff_std = {},

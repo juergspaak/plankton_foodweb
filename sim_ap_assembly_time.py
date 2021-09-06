@@ -8,7 +8,7 @@ import generate_plankton as gp
 from timeit import default_timer as timer
 
 
-n_coms = 100
+n_coms = 1000
 n_rich = [1,2,3,4,5,10,15,20,25]
 
 

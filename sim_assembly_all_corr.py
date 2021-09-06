@@ -9,7 +9,7 @@ from timeit import default_timer as timer
 
 n_prec = 11
 
-n_coms = 300
+n_coms = 500
 
 
 exp = 10**np.linspace(-1,1,n_prec)
@@ -35,8 +35,10 @@ for i in range(n_prec):
     res_phyto[i] = res_equi
     dens_phyto[i] = np.sum(dens_equi, axis = -1)
     print(i,np.mean(rich_phyto[i], axis = 0), timer()-start, timer()-tot_start)
-        
-np.savez("Data_assembly_all_corr_phyto", rich = rich_phyto, res = res_phyto, dens = dens_phyto)
+    dens_phyto[dens_phyto == 0] = np.nan
+np.savez("Data_assembly_all_corr_phyto", rich = rich_phyto,
+         P = res_phyto[...,0], N = res_phyto[...,1], L = res_phyto[...,2],
+         dens = np.log(dens_phyto), change_var = corr_phyto, exp = exp)
 
 
 exp = 10**np.linspace(-0.1,1.5,n_prec)
@@ -62,9 +64,11 @@ for i in range(len(rich_zoo)):
     print(i, np.mean(rich_zoo[i], axis = 0), timer()-start)
 
 #"""
-np.savez("Data_assembly_all_corr_zoo", rich = rich_zoo, res = res_zoo,
-         dens = dens_zoo)
+np.savez("Data_assembly_all_corr_zoo", rich = rich_zoo,
+         P = res_zoo[...,0], N = res_zoo[...,1], L = res_zoo[...,2],
+         dens = np.log(dens_zoo), change_var = corr_zoo, exp = exp)
 
+"""
 fig, ax = plt.subplots(2,2, sharex = True, sharey = True, figsize = (13,13))
 
 x_phyto = np.linalg.det(corr_phyto)
@@ -91,7 +95,7 @@ ax[0,1].axvline(np.amax(np.linalg.eigvalsh(gp.zt.corr_zoop), axis = -1)/len(gp.z
 ax[1,1].axvline(np.amax(np.linalg.eigvalsh(gp.zt.corr_zoop), axis = -1)/len(gp.zt.corr_zoop), color = "k")
 
 
-ax[1,0].set_xlabel("MAx eigvalue")
+ax[1,0].set_xlabel("Max eigvalue")
 ax[1,1].set_xlabel("max eigvalue")
 
 ax[1,0].set_ylabel("Phyto richness")
@@ -100,3 +104,4 @@ ax[0,0].set_title("Phytoplankton corr")
 ax[0,1].set_title("Zooplankton corr")
 
 fig.savefig("Figure_assembly_all_corr.pdf")
+"""

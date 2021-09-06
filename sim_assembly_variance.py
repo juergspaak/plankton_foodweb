@@ -32,7 +32,7 @@ for j, trait in enumerate(const_traits):
         rich_all[j,i] = richness
         res_all[j,i] = res_equi
         dens_all[j,i] = np.nansum(dens_equi, axis = -1)
-        
+        dens_all[dens_all == 0] = np.nan
         print(j,i,fac[i], trait, np.mean(rich_all[j,i], axis = 0),
               timer()-start, timer()-all_start)
     np.savez("Data_assembly_var2", rich = rich_all, N = res_all[...,1],

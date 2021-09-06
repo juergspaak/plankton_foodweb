@@ -13,7 +13,7 @@ n_coms = 100
 const_traits = np.append(gp.pt.phyto_traits, gp.zt.zoop_traits)
 const_traits = np.append(const_traits, ["h_zp"])
 
-rich_all = np.empty((len(const_traits), n_prec, n_coms, 2))
+rich_all = np.full((len(const_traits), n_prec, n_coms, 2), np.nan)
 res_all = np.full((len(const_traits), n_prec, n_coms, 3), np.nan)
 dens_all = np.full((len(const_traits), n_prec, n_coms, 2), np.nan)
 
@@ -41,7 +41,7 @@ for j, trait in enumerate(const_traits):
         rich_all[j,i] = richness
         res_all[j,i] = res_equi
         dens_all[j,i] = np.nansum(dens_equi, axis = -1)
-        
+        dens_all[dens_all == 0] = np.nan
         print(i,j,add_var[i], trait, np.mean(rich_all[j,i], axis = 0),
               timer()-start, timer()-all_start)
 

@@ -4,6 +4,7 @@ import pandas as pd
 from scipy.optimize import brentq
 
 import generate_plankton as gp
+from simplified_dynamics import generate_communities, community_equilibrium
 
 n_spec_max = 4
 n_specs = np.arange(1, n_spec_max + 1)
@@ -46,7 +47,7 @@ for i in range(20):
         traits, env, ind = gp.select_i(traits, env, ind)
         
         # compute equilibrium conditions
-        traits = gp.community_equilibrium(traits, env)
+        traits = community_equilibrium(traits, env)
         div.append(np.sum(np.all(traits["N_star_Z"]>0, axis = 1) &
                           np.all(traits["N_star_P"]>0, axis = 1))
                    /len(traits["mu_P"]))
@@ -81,7 +82,7 @@ for i, key in enumerate(div_phyto.columns):
             traits, env, ind = gp.select_i(traits, env, ind)
             
             # compute equilibrium conditions
-            traits = gp.community_equilibrium(traits, env)
+            traits = community_equilibrium(traits, env)
             div.append(np.sum(np.all(traits["N_star_Z"]>0, axis = 1) &
                               np.all(traits["N_star_P"]>0, axis = 1))
                        /len(traits["mu_P"]))
@@ -119,7 +120,7 @@ for i, key in enumerate(div_zoop.columns):
             traits, env, ind = gp.select_i(traits, env, ind)
             
             # compute equilibrium conditions
-            traits = gp.community_equilibrium(traits, env)
+            traits = community_equilibrium(traits, env)
             div.append(np.sum(np.all(traits["N_star_Z"]>0, axis = 1) &
                               np.all(traits["N_star_P"]>0, axis = 1))
                        /len(traits["mu_P"]))

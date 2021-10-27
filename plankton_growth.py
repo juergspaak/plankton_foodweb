@@ -1,36 +1,23 @@
 import numpy as np
 from zoop_traits import uc
 import warnings
+#warnings.simplefilter("error", RuntimeWarning)
+
 
 def light_growth(N, t, env):
     # light limited growth at grtowth rate I_in
     tot_abs = np.sum(env["zm"]*N*t["a"], axis = -1, keepdims = True)
     # returns nan if tot_abs is zero, but this is handled correctly in next step
-    with warnings.catch_warnings(record = True):
-        return t["mu_P"]/tot_abs*np.log((t["k_l"] + env["I_in"])/
+    return 1/tot_abs*np.log((t["k_l"] + env["I_in"])/
                 (t["k_l"] + env["I_in"]*np.exp(-tot_abs)))
 
-"""
-def phosphor_growth(N, t, env):
-    P = env["d"]*env["P"] - uc["ml_L"]*np.sum(N * t["c_p"], axis = -1,
-                                              keepdims = True)
-    P[P<0] = 0
-    return t["mu_P"]*P/(P + t["k_p"])
-
-def nitrogen_growth(N, t, env):
-    N = env["d"]*env["N"] - uc["ml_L"]*np.sum(N * t["c_n"], axis = -1,
-                                                keepdims = True)
-    N[N<0] = 0
-    return t["mu_P"]*N/(N  + t["k_n"])
-"""
 
 def phyto_growth(res, N_phyto, t, env):
-    
-    growth = np.array([t["mu_P"]*res[0]/(res[0] + t["k_p"]),
-                       t["mu_P"]*res[1]/(res[1] + t["k_n"]),
+    growth = np.array([res[...,[0]]/(res[...,[0]] + t["k_n"]),
+                       res[...,[1]]/(res[...,[1]] + t["k_p"]),
                        light_growth(N_phyto, t, env)])
     # light growth might be nan if phyto densities are zero
-    return np.nanmin(growth, axis = 0)
+    return t["mu_P"]*np.nanmin(growth, axis = 0)
 
 def grazing(N_phyto,t):
     # how much zooplankton eat of each specific phytoplankton
@@ -46,7 +33,7 @@ def per_cap_plankton_growth(N, t, env):
     # separate densities into phytoplankton and zooplankton
     res = N[...,:2] # nitrogen and phosphorus concentration
     N_phyto = N[...,2:(t["r_phyto"] + 2)]
-    N_zoo = N[...,-t["r_zoo"]:]
+    N_zoo = N[...,2 + t["r_phyto"]:]
     
     # compute growth rate of zooplankton
     grazed = grazing(N_phyto,t)
@@ -59,10 +46,10 @@ def per_cap_plankton_growth(N, t, env):
              - uc["h_day"]/uc["ml_L"]*np.einsum("...z,...zp->...p", N_zoo, grazed)
              - env["d"])
     
-    dres_dt = np.array([env["d"]*(env["P"]- res[0]) -
-                     uc["ml_L"]*np.sum(t["c_p"]*growth_P*N_phyto, axis = -1),
-              env["d"]*(env["N"]- res[1])
-                  - uc["ml_L"]*np.sum(t["c_n"]*growth_P*N_phyto, axis = -1)])
+    dres_dt = np.array([env["d"]*(env["N"] - res[...,0]) -
+                     uc["ml_L"]*np.sum(t["c_n"]*growth_P*N_phyto, axis = -1),
+              env["d"]*(env["P"] - res[...,1])
+                  - uc["ml_L"]*np.sum(t["c_p"]*growth_P*N_phyto, axis = -1)]).T
     
     return np.concatenate((dres_dt/res, dP_dt, dZ_dt), axis = -1)
 
@@ -76,9 +63,8 @@ def convert_ode_to_log(logN, t, env):
     # dlog(N)/dt = 1/N dN/dt
     return per_cap_plankton_growth(N, t, env)
 
-
 ###############################################################################
-if __name__ == "__main__":
+if __name__ == "__main__" and False:
     import matplotlib.pyplot as plt
     from scipy.integrate import solve_ivp
     import generate_plankton as gp
@@ -115,7 +101,7 @@ if __name__ == "__main__":
     ti, envi, i = gp.select_i(traits, env)
     
     # add environmental noise
-    N = np.concatenate(([envi["P"], envi["N"]],ti["N_star_P"], ti["N_star_Z"]), axis = 0)
+    N = np.concatenate(([envi["N"], envi["P"]],ti["N_star_P"], ti["N_star_Z"]), axis = 0)
     err = 1e-0
     N *= np.random.uniform(1-err,1+err,N.shape)
        

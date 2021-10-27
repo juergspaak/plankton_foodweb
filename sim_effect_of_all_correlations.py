@@ -4,7 +4,8 @@ import pandas as pd
 from scipy.optimize import brentq
 
 import generate_plankton as gp
-"""
+from simplified_dynamics import generate_communities, community_equilibrium
+
 n_spec_max = 4
 n_specs = np.arange(1, n_spec_max + 1)
 n_coms = int(1e4)
@@ -31,7 +32,7 @@ div = []
 
 for n_spec in n_specs:
     # generate phytoplankton and 
-    traits, env = gp.generate_communities(n_spec,n_coms,
+    traits, env = generate_communities(n_spec,n_coms,
                                   evolved_zoop=True)
     div.append(traits["n_coms"])
 div.append(np.sum(n_specs*div)/sum(div))
@@ -55,7 +56,7 @@ for i in range(n_prec):
         traits, env, ind = gp.select_i(traits, env, ind)
         
         # compute equilibrium conditions
-        traits = gp.community_equilibrium(traits, env)
+        traits = community_equilibrium(traits, env)
         div.append(np.sum(np.all(traits["N_star_Z"]>0, axis = 1) &
                           np.all(traits["N_star_P"]>0, axis = 1))
                    /len(traits["mu_P"]))
@@ -96,14 +97,14 @@ for i in range(n_prec):
         traits, env, ind = gp.select_i(traits, env, ind)
         
         # compute equilibrium conditions
-        traits = gp.community_equilibrium(traits, env)
+        traits = community_equilibrium(traits, env)
         div.append(np.sum(np.all(traits["N_star_Z"]>0, axis = 1) &
                           np.all(traits["N_star_P"]>0, axis = 1))
                    /len(traits["mu_P"]))
     div.append(np.sum(n_specs*div)/sum(div))
     div_zoo.loc[i, ["r_spec_{}".format(2*i) for i in n_specs] + ["mean"]] = div
     print(i, np.linalg.det(corr_zoo[i]))
-"""
+
 
 fig, ax = plt.subplots(2,3, sharey = True)
 mean = div_phyto.loc[div_phyto.exp == 1, "mean"]

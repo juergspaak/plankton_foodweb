@@ -1,41 +1,55 @@
 import numpy as np
-
 from assembly_time_fun import assembly_richness
 import generate_plankton as gp
 from timeit import default_timer as timer
 
-n_prec = 11
 
-n_coms = 100
+const_traits = np.append(gp.pt.phyto_traits[1:], gp.zt.zoop_traits[1:])
+const_traits = np.append(const_traits, ["h_zp", "s_zp"])
+n_prec = 9
+n_coms = 1000
+n_spec = 20
 
-
-const_traits = np.append(gp.pt.phyto_traits, gp.zt.zoop_traits)
-const_traits = np.append(const_traits, ["s_zp", "h_zp"])
-
-fac = 4**np.linspace(-1,1,n_prec)
-rich_all = np.full((len(const_traits), n_prec, n_coms, 2), np.nan)
-res_all = np.full((len(const_traits), n_prec, n_coms, 3), np.nan)
-dens_all = np.full((len(const_traits), n_prec, n_coms, 2), np.nan)
+    
 
 all_start = timer()
-for j, trait in enumerate(const_traits):
+fac = 2**np.linspace(-1,1,n_prec)
+
+path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
+
+for i in range(n_prec):
+    for trait in const_traits:
+        print(i, trait)
+        # check whether computation has already been done
+        try:
+            save = "assebly_var_{}_{}_{}_{}.npz".format(n_spec, n_coms, trait, i)
+            
+            data = np.load(path + save)
+            
+            continue
+        except FileNotFoundError:
+            pass
+        save = "data/" + save
+        
+        # is file already being created?
+        try:
+            data = np.load(save)
+            continue
+        except FileNotFoundError:
+            # file is not already being created, start process
+            np.savez(save, prelim = 1)
+        
     
-    for i in range(n_prec):
-        start = timer()
-        traits = gp.generate_plankton(5, n_coms, diff_std = {trait: fac[i]})
+        # generate altered traits
+        traits = gp.generate_plankton(n_spec, n_coms, diff_std = {trait: fac[i]})
         env = gp.generate_env(n_coms)
         traits = gp.phytoplankton_equilibrium(traits, env)
+
+        # simulate densities
+        start = timer()
+        richness, present, res, dens = assembly_richness(
+                        traits, env, plot_until = 0, ret_all = True,
+                        save = save)
         
-                # simulate densities
-        richness, id_survive, res_equi, dens_equi = assembly_richness(
-                        traits, env, plot_until = 0, ret_all = True)
-        rich_all[j,i] = richness
-        res_all[j,i] = res_equi
-        dens_all[j,i] = np.nansum(dens_equi, axis = -1)
-        dens_all[dens_all == 0] = np.nan
-        print(j,i,fac[i], trait, np.mean(rich_all[j,i], axis = 0),
-              timer()-start, timer()-all_start)
-    np.savez("Data_assembly_var2", rich = rich_all, N = res_all[...,1],
-             P = res_all[...,0], L = res_all[...,2],
-             dens = np.log(dens_all),
-         traits = const_traits, change_traits = fac)
+        np.savez(save, change_var = fac[i], i = n_coms, present = present, res = res,
+                 dens = dens, time = timer()-start, **traits, **env )

@@ -1,48 +1,41 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from assembly_time_fun import assembly_richness
 import generate_plankton as gp
 
 
-n_coms = 100
+t = 20 # amount of years of simulations
 
+data = np.load("data/assembly_long_30_1000_0.npz")
+richness = np.sum(data["present"][...,t], axis = -1)-1
 
-const_traits = np.append(gp.pt.phyto_traits, gp.zt.zoop_traits)
-const_traits = np.append(const_traits, ["h_zp"])
-
-
-
-
-traits = gp.generate_plankton(5, n_coms)
-env = gp.generate_env(n_coms)
-traits = gp.phytoplankton_equilibrium(traits, env)
-        
-rich_all, id_survive, res_equi, dens_equi = assembly_richness(traits, env, plot_until = 0)
-
-
+#"""
 fig, ax = plt.subplots(3,2, figsize = (9,9))
-
-prob_richness = np.empty((traits["r_phyto"], traits["r_zoo"]))
-for i in range(traits["r_phyto"]):
-    for j in range(traits["r_phyto"]):
-        prob_richness[i,j] = np.sum(np.all(rich_all == [i,j], axis = -1))
+r_phyto, r_zoo = np.nanpercentile(richness, [5, 95], axis = 0).T
+extent = (np.nanpercentile(richness, [5, 95], axis = 0).T + [-0.5, 0.5]).flatten()
+r_phyto = np.arange(r_phyto[0], r_phyto[1] + 1)
+r_zoo = np.arange(r_zoo[0], r_zoo[1] + 1)
+prob_richness = np.empty((len(r_phyto), len(r_zoo)))
+for i, rp in enumerate(r_phyto):
+    for j, rz in enumerate(r_zoo):
+        prob_richness[i,j] = np.sum(np.all(richness == [rp,rz], axis = -1))
 
 prob_richness /= np.sum(prob_richness)
+prob_richness[prob_richness == 0] = np.nan
 #prob_richness[prob_richness == 0] = np.nan
 
-cmap = ax[0,0].imshow(prob_richness, origin = "lower")
+cmap = ax[0,0].imshow(prob_richness.T, origin = "lower",
+                      extent = extent)
 fig.colorbar(cmap, ax = ax[0,0])
-r_phyto, r_zoo = np.meshgrid(np.arange(traits["r_phyto"]),
-                             np.arange(traits["r_zoo"]))
-ax[0,0].scatter(r_phyto, r_zoo, s = 10000*prob_richness**2, color = "red")
+r_phyto, r_zoo = np.meshgrid(r_phyto, r_zoo)
+ax[0,0].scatter(r_phyto, r_zoo, s = 5000*prob_richness.T**2, color = "red")
 
 ax[0,0].set_xlabel("Phytoplankton richness")
 ax[0,0].set_ylabel("Zooplankton richness")
 
 # traits survivor
-tr_surv_phyto = np.array([traits[key][id_survive[:,0]] for key in gp.pt.phyto_traits])
-tr_surv_zoo = np.array([traits[key][id_survive[:,1]] for key in gp.zt.zoop_traits])
+tr_surv_phyto = np.array([data[key][data["present"][:,0, ..., t]] for key in gp.pt.phyto_traits])
+tr_surv_zoo = np.array([data[key][data["present"][:,1, ..., t]] for key in gp.zt.zoop_traits])
 tr_surv_phyto = np.log(tr_surv_phyto)
 tr_surv_zoo = np.log(tr_surv_zoo)
 
@@ -89,14 +82,14 @@ ax[1,1].set_yticklabels(gp.zt.zoop_traits)
 
 # plot distribution of surviving species
 ax[2,0].hist(tr_surv_phyto[0], bins = 30, density = True, label = "Survivors")
-ax[2,0].hist(np.log(traits["size_P"]).flatten(), bins = 30, density = True,
+ax[2,0].hist(np.log(data["size_P"]).flatten(), bins = 30, density = True,
              alpha = 0.5, label = "reference")
 ax[2,0].legend()
 ax[2,0].set_xlabel("Phytoplankton size")
 ax[2,0].set_ylabel("Probability")
 
 ax[2,1].hist(tr_surv_zoo[0], bins = 30, density = True, label = "Survivors")
-ax[2,1].hist(np.log(traits["size_Z"]).flatten(), bins = 30, density = True,
+ax[2,1].hist(np.log(data["size_Z"]).flatten(), bins = 30, density = True,
              alpha = 0.5, label = "reference")
 ax[2,1].legend()
 ax[2,1].set_xlabel("Zooplankton size")
@@ -105,5 +98,16 @@ ax[2,1].set_ylabel("Probability")
 for i,a in enumerate(ax.flatten()):
     a.set_title("ABCDEF"[i], loc = "left")
 fig.tight_layout()
+"""
+# print results
+print("range", np.amin(rich_all, axis = 0), np.amax(rich_all, axis = 0))
+print("average richness", np.mean(rich_all, axis = 0))
+print("phyto or zoo higher richness",
+      np.sum(rich_all[:,0]>rich_all[:,1])/len(rich_all),
+      np.sum(rich_all[:,0]==rich_all[:,1])/len(rich_all),
+      np.sum(rich_all[:,0]<rich_all[:,1])/len(rich_all))
+print("correlatoin", np.corrcoef(rich_all.T))"""
+      
 
-#fig.savefig("Figure_ap_base_case_analysis.pdf")
+
+fig.savefig("Figure_ap_base_case_analysis.pdf")

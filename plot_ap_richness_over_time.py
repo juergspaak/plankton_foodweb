@@ -1,40 +1,28 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.cm import viridis
 
-from assembly_time_fun import evolve_time, select_survivors, assembly_richness
-import generate_plankton as gp
-from timeit import default_timer as timer
-
-data = np.load("Data_ap_richness_over_time.npz", allow_pickle = True)
-rich_all = data["rich_all"]
-present = data["present"]
-res_equi = data["res_equi"]
-dens_equi = data["dens_equi"]
-traits = data["traits"][()]
-env = data["env"][()]
+data = np.load("data/assembly_long_30_1000_0.npz")
 
 ###############################################################################
 # plot results    
 fig, ax = plt.subplots(3,3, sharex = True, sharey = "row",
                        figsize = (7,7))      
 
-richness = np.sum(present, axis = -2)
+richness = np.sum(data["present"], axis = -2)
 
 richness[..., 1:-1] = richness[..., 1:-1] -1
 
 
-years = np.arange(traits["r_phyto"] + 1)
+years = np.arange(data["r_phyto"] + 1)
 focal_trait = ["size_P", "size_Z"]
 
 for i in range(2):
-    ti, evni, i = gp.select_i(traits, env, i)
     for j in range(2):
-        size = np.log(ti[focal_trait[j]])
-        for k in range(ti["r_phyto"]):
-            ax[j+1, i].plot(years[present[i, j, k]], np.repeat(size[k], sum(present[i, j,k])),
+        size = np.log(data[focal_trait[j]][i])
+        for k in range(data["r_phyto"]):
+            ax[j+1, i].plot(years[data["present"][i, j, k]], np.repeat(size[k], sum(data["present"][i, j,k])),
                            color = "k")
-            ax[j+1, i].plot(years[np.nanargmax(present[i, j, k])], size[k], "k.")
+            ax[j+1, i].plot(years[np.nanargmax(data["present"][i, j, k])], size[k], "k.")
         
     ax[0,i].plot(years, richness[i].T, '.-', label = "hi")
 
@@ -47,20 +35,20 @@ ax[0,2].plot(years[1:], np.mean(richness[:,1], axis = 0), ".-")
 
 # trait distributions
 nbins = 15
-hists = np.empty((2, traits["r_phyto"], nbins))
+hists = np.empty((2, data["r_phyto"], nbins))
 p = .1
 
 for i in range(2):
-    size = np.log(traits[focal_trait[i]])
-    mean = np.empty(traits["r_phyto"])
+    size = np.log(data[focal_trait[i]])
+    mean = np.empty(data["r_phyto"])
     bins = np.linspace(*np.nanpercentile(size, [p,100-p]), nbins+1)
-    for j in range(0,ti["r_phyto"]):
-        hists[i,j] = np.histogram(size[present[:,i,:,j+1]], bins = bins,
+    for j in range(0,data["r_phyto"]):
+        hists[i,j] = np.histogram(size[data["present"][:,i,:,j+1]], bins = bins,
                                   density = True)[0]
-        mean[j] = np.mean(size[present[:,i,:,j]])
+        mean[j] = np.mean(size[data["present"][:,i,:,j]])
         
     ax[i+1,2].imshow(hists[0].T, origin = "lower", aspect = "auto",
-               extent = [0,traits["r_phyto"], bins[0], bins[-1]])
+               extent = [0,data["r_phyto"], bins[0], bins[-1]])
     ax[i+1,2].plot(years[1:]+.5, mean, "r-")
 
 ax[0,2].legend(["Phytoplankton", "Zooplankton"])

@@ -7,9 +7,6 @@ from matplotlib import colors
 
 # prepare data
 
-
-
-
 data = {}
 responses = {"phyto": [], "zoo": []}
 for trait in ["phyto", "zoo"]:
@@ -18,14 +15,12 @@ for trait in ["phyto", "zoo"]:
                                                    index_col = 0)
         responses[response].extend(data[trait + "_" + response].values.flatten())
 
-data_ref = pd.read_csv("data/assembly_mean.csv")
-ind_ref = data_ref["change"] == 0
-ref = data_ref.loc[ind_ref, ["richness_phyto", "richness_zoo"]].values
+
+ref = pd.read_csv("data/assembly_reference.csv").values
 sig = 2.5
 mean_ref = np.nanmean(ref, axis = 0)
 std_ref = np.nanstd(ref, axis = 0)
 bounds = mean_ref + sig*std_ref*[[-1],[1]]
-
 
 fig, ax = plt.subplots(3,2, figsize = (9,12),
                        sharex = "row", sharey = "row")
@@ -100,7 +95,7 @@ response = response[np.isfinite(response.richness_phyto)]
 response = response.reset_index(drop = True)
 
 # find the most important x tradeoffs
-n_interest = 5
+n_interest = 7
 ind = np.append(np.arange(n_interest), np.arange(-n_interest, 0,1))
 tradeoffs = response.loc[np.argsort(response.richness_phyto).values[ind], "tradeoff"]
 tradeoffs2 = response.loc[np.argsort(response.richness_zoo).values[ind], "tradeoff"]

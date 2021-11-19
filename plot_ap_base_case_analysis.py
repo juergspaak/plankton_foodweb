@@ -1,18 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 import generate_plankton as gp
 
 
 t = 20 # amount of years of simulations
 
-data = np.load("data/assembly_long_30_1000_0.npz")
+data = np.load("data/assembly_long_60_1000_0.npz")
 richness = np.sum(data["present"][...,t], axis = -1)-1
 
 #"""
 fig, ax = plt.subplots(3,2, figsize = (9,9))
-r_phyto, r_zoo = np.nanpercentile(richness, [5, 95], axis = 0).T
-extent = (np.nanpercentile(richness, [5, 95], axis = 0).T + [-0.5, 0.5]).flatten()
+q = 1
+r_phyto, r_zoo = np.nanpercentile(richness, [q, 100-q], axis = 0).T
+extent = (np.nanpercentile(richness, [q, 100-q], axis = 0).T + [-0.5, 0.5]).flatten()
 r_phyto = np.arange(r_phyto[0], r_phyto[1] + 1)
 r_zoo = np.arange(r_zoo[0], r_zoo[1] + 1)
 prob_richness = np.empty((len(r_phyto), len(r_zoo)))
@@ -98,16 +100,18 @@ ax[2,1].set_ylabel("Probability")
 for i,a in enumerate(ax.flatten()):
     a.set_title("ABCDEF"[i], loc = "left")
 fig.tight_layout()
-"""
-# print results
-print("range", np.amin(rich_all, axis = 0), np.amax(rich_all, axis = 0))
-print("average richness", np.mean(rich_all, axis = 0))
-print("phyto or zoo higher richness",
-      np.sum(rich_all[:,0]>rich_all[:,1])/len(rich_all),
-      np.sum(rich_all[:,0]==rich_all[:,1])/len(rich_all),
-      np.sum(rich_all[:,0]<rich_all[:,1])/len(rich_all))
-print("correlatoin", np.corrcoef(rich_all.T))"""
-      
 
+# print results
+print("Resilts")
+df = pd.DataFrame(np.nan, index = ["Phyto", "Zoo"],
+                  columns = ["min", "max", "mean", "median", "percent higher"])
+df["min"] = np.nanpercentile(richness, .5, axis = 0)
+df["max"] = np.nanpercentile(richness, 99.5, axis = 0)
+df["median"] = np.nanpercentile(richness, 50, axis = 0)
+df["mean"] = np.nanmean(richness, axis = 0)
+df["equal"] = np.nanmean(richness[:,0] == richness[:,1])
+df["percent higher"] = np.mean(richness>richness[:,::-1], axis = 0)
+print(df)
+print("correlation:", np.corrcoef(richness.T)[0,1])
 
 fig.savefig("Figure_ap_base_case_analysis.pdf")

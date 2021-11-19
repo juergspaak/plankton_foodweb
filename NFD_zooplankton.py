@@ -8,12 +8,6 @@ import warnings
 import generate_plankton as gp
 import plankton_growth as pg
 
-
-n_coms = int(1e4)
-r_phyto = 2
-traits, env = gp.generate_communities(r_phyto, n_coms)
-traits = gp.approx_community(traits, env)
-
 def focal_species(N_focal, ind_focal, ti, envi, species_order = None,
                   N_mid = None, n_grid = int(1e3), min_value = 1e-5,
                   tol = 1e-5):
@@ -181,11 +175,13 @@ def growth_zooplankton(N_zoo, ti, envi):
         return simps(growth_distribution, x = distribution.t, axis = 0)/distribution.t[-1]
         
 if __name__ == "__main__":
+    
+    n_coms = int(1e4)
+    r_phyto = 2
+    traits, env = gp.generate_communities(r_phyto, n_coms)
+    
     # select species with vastly different sizes to increase niche differences
     ti, envi, i = gp.select_i(traits, env)
-    
-    
-    #distribution = phyto_conditional_distribution(N_focal, ind_zoo, ti, envi)
     
     itera = 21
     N_zoo = np.exp(np.linspace(np.log(ti["N_star_Z"]/10),

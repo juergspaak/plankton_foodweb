@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-data = np.load("data/assembly_long_30_1000_0.npz")
+data = np.load("data/assembly_long_60_1000_0.npz")
 
 ###############################################################################
 # plot results    

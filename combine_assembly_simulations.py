@@ -12,7 +12,7 @@ n_prec = 9
 
 ##############################################################################
 # changes in mean
-"""
+
 traits = np.concatenate((gp.pt.phyto_traits[1:], gp.zt.zoop_traits[1:], ["h_zp"]))
 
 add_mean = np.linspace(-1,1,n_prec)
@@ -20,21 +20,15 @@ df_mean = pd.DataFrame(np.nan, index = np.arange(n_prec*len(traits)),
                     columns = ["trait", "richness_phyto", "richness_zoo", "change"])
 
 counter = 0
-path = "C:/Users/Juerg Spaak/Documents/Science backup/Trophic network_data/"
-#path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
-file2 = "assembly_mean_{}_{}.npz"
-file = "../TND/assebly_mean_20_1000_{}_{}.npz"
+path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
+
+file = "assebly_mean_20_1000_{}_{}.npz"
 for i in range(n_prec):
     for trait in traits:
         data = np.load(path + file.format(trait, i))
         
         
         df_mean.loc[counter] = [trait, *d_mean(data), data["change_mean"]]
-        
-        # from old data saving method
-        #data = np.load(path + file2.format(trait, i))
-        #df_mean.loc[counter] = [trait, *d_mean(data), add_mean[i]]       
-        #np.savez(path2 + file2.format(trait, i), **data, change_mean = add_mean[i])
         counter += 1
        
 df_mean.to_csv("data/assembly_mean.csv", index = False)
@@ -50,33 +44,25 @@ df_mean = pd.DataFrame(np.nan, index = np.arange(n_prec*len(traits)),
                     columns = ["trait", "richness_phyto", "richness_zoo", "change"])
 
 counter = 0
-path = "C:/Users/Juerg Spaak/Documents/Science backup/Trophic network_data/"
-#path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
-file = "../TND/assebly_var_20_1000_{}_{}.npz"
+file = "/assebly_var_20_1000_{}_{}.npz"
 for i in range(n_prec):
     for trait in traits:
-        try:
-            data = np.load(path + file.format(trait, i))
-            data["change_var"]
-        except FileNotFoundError:
-            continue
-        except KeyError:
-            continue
-        
+
+        data = np.load(path + file.format(trait, i))     
         
         df_mean.loc[counter] = [trait, *d_mean(data), data["change_var"]]
         counter += 1
        
 df_mean.to_csv("data/assembly_var.csv", index = False)
-"""
+
 ##############################################################################
 # simplified phytoplankton correlations
 
 
-file2 = "../TND/assembly_corr_20_1000_{}_{}_{}.npz"
+file = "assembly_corr_20_1000_{}_{}_{}.npz"
 traits = gp.pt.phyto_traits[1:]
 
-df_corr_phyto = pd.DataFrame(np.nan, index = np.arange(len(traits)**2),
+df_corr_phyto = pd.DataFrame(np.nan, index = np.arange(len(traits)*(len(traits)-1)),
                     columns = ["traiti", "traitj", "richness_phyto", "richness_zoo", "corr"])
 
 df_phyto_phyto = pd.DataFrame(np.nan, index = traits, columns = traits)
@@ -84,26 +70,12 @@ df_phyto_zoo = df_phyto_phyto.copy()
 
 counter = 0
 for i, trait in enumerate(traits):
-    for j, traiti in enumerate(traits):
-        if traiti == trait:
-            df_corr_phyto.loc[counter] = [trait, traiti, np.nan, np.nan, np.nan]
-            counter += 1
-            continue       
-        
-        data = np.load(path + file2.format(*sorted([trait, traiti]), 0 if i>j else n_prec-1))
-        '''
-        file = "sim_simplified_corr_phyto_20_1000_{}_{}.npz"
-        # old data saveing method
-        data = np.load(path + file.format(trait, traiti))
-        corr = brentq(fun, gp.pt.corr_phyto.loc[trait,traiti],
-                                            -1 if i>j else 1,
-                                    args = (trait, traiti, gp.pt.corr_phyto.copy()))
-        corr_test = np.corrcoef(np.log(data[trait].flatten()), np.log(data[traiti].flatten()))
-        if np.abs(corr-corr_test[0,1])>1e-2:
-            print(corr, corr_test[0,1], trait, traiti, data["present"].shape)
-        np.savez(path + file2.format(*sorted([trait, traiti]), 0 if i>j else 8), **data, corr = corr)
-        '''
-        
+    for j, traiti in enumerate(traits):     
+        if i==j:
+            continue
+
+        data = np.load(path + file.format(*sorted([trait, traiti]), 0 if i>j else n_prec-1))
+
         richness = d_mean(data)
         df_corr_phyto.loc[counter] = [trait, traiti, *richness, np.nan]
         
@@ -119,11 +91,11 @@ df_corr_phyto.to_csv("data/assembly_corr_phyto.csv", index = False)
 #"""
 ##############################################################################
 # simplified zoop correlations
-"""
-file2 = "../TND/assembly_corr_20_1000_{}_{}_{}.npz"
+
+file = "assembly_corr_20_1000_{}_{}_{}.npz"
 traits = gp.zt.zoop_traits[1:]
 
-df_corr_zoo = pd.DataFrame(np.nan, index = np.arange(len(traits)**2),
+df_corr_zoo = pd.DataFrame(np.nan, index = np.arange(len(traits)*(len(traits)-1)),
                     columns = ["traiti", "traitj", "richness_phyto", "richness_zoo", "corr"])
 
 df_zoo_phyto = pd.DataFrame(np.nan, index = traits, columns = traits)
@@ -133,26 +105,10 @@ counter = 0
 for i, trait in enumerate(traits):
     for j, traiti in enumerate(traits):
         if traiti == trait:
-            df_corr_phyto.loc[counter] = [trait, traiti, np.nan, np.nan, np.nan]
-            counter += 1
             continue       
-        try:
-            data = np.load(path + file2.format(*sorted([trait, traiti]), 0 if i>j else n_prec-1))
-        except FileNotFoundError:
-            counter += 1
-            continue
+
+        data = np.load(path + file.format(*sorted([trait, traiti]), 0 if i>j else n_prec-1))
         
-        '''
-        # old data saveing method
-        data = np.load(path + file.format(trait, traiti))
-        corr = brentq(fun, gp.pt.corr_phyto.loc[trait,traiti],
-                                            -1 if i>j else 1,
-                                    args = (trait, traiti, gp.pt.corr_phyto.copy()))
-        corr_test = np.corrcoef(np.log(data[trait].flatten()), np.log(data[traiti].flatten()))
-        if np.abs(corr-corr_test[0,1])>1e-2:
-            print(corr, corr_test[0,1], trait, traiti, data["present"].shape)
-        np.savez(path + file2.format(*sorted([trait, traiti]), 0 if i>j else 8), **data, corr = corr)
-        '''
         
         richness = d_mean(data)
         df_corr_zoo.loc[counter] = [trait, traiti, *richness, np.nan]
@@ -171,15 +127,15 @@ df_corr_zoo.to_csv("data/assembly_corr_zoo.csv", index = False)
 ##############################################################################
 # correlations
 
-file = "assembly_cor_{}_{}_{}.npz"
-file2 = "../TND/assembly_corr_20_1000_{}_{}_{}.npz"
+file = "assembly_corr_20_1000_{}_{}_{}.npz"
 
-zoop = ["c_Z:k_Z", "c_Z:mu_Z", "c_Z:m_Z", "k_Z:mu_Z", "m_Z:mu_Z"]
-gleaner = ["c_n:k_n", "c_p:k_p", "a:k_l"]
-resources = ["a:c_n", "a:c_p", "c_n:c_p", "k_n:k_p", "k_l:k_n", "k_l:k_p",]
-growth_defense = ["R_p:e_P", "R_P:mu_P", "e_P:mu_P"]
-weird = ["c_n:mu_P", "R_P:k_n"]
-corrs = zoop + gleaner + resources + weird + growth_defense
+corrs = ["{}:{}".format(*sorted([traiti, traitj]))
+         for traiti in gp.pt.phyto_traits[1:]
+         for traitj in gp.pt.phyto_traits[1:]]
+corrs = corrs + ["{}:{}".format(*sorted([traiti, traitj]))
+         for traiti in gp.zt.zoop_traits[1:]
+         for traitj in gp.zt.zoop_traits[1:]]
+corrs = list(set(corrs))
 
 df_corr = pd.DataFrame(np.nan, index = np.arange(len(traits)*n_prec),
                     columns = ["tradeoff", "richness_phyto", "richness_zoo", "corr"])
@@ -188,16 +144,33 @@ for trait in corrs:
     traiti, traitj = trait.split(":")
     for i in np.arange(n_prec):
         try:
-            data = np.load(path + file2.format(traiti, traitj,i))
-            #np.savez(path + file2.format(*sorted([traiti, traitj]), i), **data)
+            data = np.load(path + file.format(traiti, traitj,i))
             df_corr.loc[counter] = [trait,  *d_mean(data), np.round(data["corr"],3)]
             counter += 1
         except FileNotFoundError:
-            #df_corr.loc[counter] = [trait,  np.nan, np.nan, np.round(data["corr"],3)]
-            counter += 1
-            print(trait, i)
-            continue
+            pass
         
     
 df_corr.to_csv("data/assembly_corr.csv", index = False)
 #"""
+
+##############################################################################
+# reference cases
+
+traits = np.concatenate((gp.pt.phyto_traits[1:], gp.zt.zoop_traits[1:], ["h_zp"]))
+
+df_ref = pd.DataFrame(np.nan, index = np.arange(2*len(traits)),
+                    columns = ["richness_phyto", "richness_zoo"])
+
+counter = 0
+
+file = "assebly_{}_20_1000_{}_{}.npz"
+for change in ["var", "mean"]:
+    for trait in traits:
+        data = np.load(path + file.format(change, trait, n_prec//2))
+        
+        
+        df_ref.loc[counter] = d_mean(data)
+        
+        counter += 1
+df_ref.to_csv("data/assembly_reference.csv", index = False)

@@ -4,6 +4,7 @@ plt.style.use('dark_background')
 
 
 import phytoplankton_traits as pt
+import generate_plankton as gp
 
 fig = plt.figure(figsize = (13,13)) 
 
@@ -15,13 +16,8 @@ bins = 20
 alpha = 0.5
 fs = 24
 
-traits = pt.generate_phytoplankton_traits(1,500)
+traits = gp.generate_plankton(1, 500)
 traits = {key:np.log(traits[key]) for key in traits.keys()}
-
-trait_names = ["Size", "Maximum\ngrowth", "Halfsaturation\nnitrogen",
-               "Halfsatuation\nphosphorus", "Halfsaturation\nlight",
-               "Nitrogen\nuptake", "Phosphorus\nuptake", "Light\nuptake",
-               "Edibility", "Resource\nconcentration"]
 
 traits_shown = ["size_P", "mu_P", "c_n", "R_P"]
 trait_names = ["Size", "Maximum\ngrowth", "Nitrogen\nuptake",
@@ -81,3 +77,48 @@ for i, trait in enumerate(traits_shown):
                         s = 5, color = "orange")
         
 plot()
+
+# alter trait means
+traits = gp.generate_plankton(1, 500, diff_mean = {"mu_P":1})
+traits = {key:np.log(traits[key]) for key in traits.keys()}
+
+for i, trait in enumerate(traits_shown):
+    ax[i,i].hist(traits[trait], bins = bins, color = "green", alpha = .5,
+                 density = True)
+    for j, traitj in enumerate(traits_shown):
+        if j>=i:
+            continue
+        ax[i,j].scatter(traits[traitj], traits[trait],
+                        s = 1, color = "green")
+
+plot()
+        
+# alter trait means
+traits = gp.generate_plankton(1, 500, diff_std = {"c_n":2})
+traits = {key:np.log(traits[key]) for key in traits.keys()}
+
+for i, trait in enumerate(traits_shown):
+    ax[i,i].hist(traits[trait], bins = bins, color = "red", alpha = .5,
+                 density = True)
+    for j, traitj in enumerate(traits_shown):
+        if j>=i:
+            continue
+        ax[i,j].scatter(traits[traitj], traits[trait],
+                        s = 1, color = "red")
+
+plot()
+# alter trait means
+traits = gp.generate_plankton(1, 500, tradeoffs = {"size_P:R_P":-0.5})
+traits = {key:np.log(traits[key]) for key in traits.keys()}
+
+for i, trait in enumerate(traits_shown):
+    ax[i,i].hist(traits[trait], bins = bins, color = "purple", alpha = .5,
+                 density = True)
+    for j, traitj in enumerate(traits_shown):
+        if j>=i:
+            continue
+        ax[i,j].scatter(traits[traitj], traits[trait],
+                        s = 1, color = "purple")
+        
+plot()
+        

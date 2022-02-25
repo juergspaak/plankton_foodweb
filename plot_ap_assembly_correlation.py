@@ -55,4 +55,4 @@ for i in range(len(ax)):
         ax[i,j].axhline(mean_ref[i], color = "red")
         
 
-fig.savefig("Figure_ap_assembly_correlation.pdf")
+fig.savefig("Figure_assembly_correlation.pdf")

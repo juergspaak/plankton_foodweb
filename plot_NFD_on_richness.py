@@ -21,10 +21,11 @@ fig, ax = plt.subplots(2,2, sharex = "col", sharey = "row",
                        figsize = (9,9))
 
 style = [dict(marker = "o", color = "b", ls = ""),
-         dict(marker = "^", color = "g", ls = "")]
+         dict(marker = "^", color = "red", ls = "")]
 
 NFD_all = [[[[] for i in range(3)] for j in range(2)] for k in range(2)]
 rich_all = [[[[] for i in range(3)] for j in range(2)] for k in range(2)]
+label = ["Changes in mean", "Changes in correlations"]
 
 for i, change in enumerate(["Mean", "correlation"]):
     for j, NFD in enumerate(["ND_mean_1", "FD_median_2"]):
@@ -40,13 +41,13 @@ for i, change in enumerate(["Mean", "correlation"]):
                          **style[i])
             NFD_all[i][j][1].extend(data_NFD[i].loc[data_NFD[i].trait == trait, NFD].values)
             rich_all[i][j][1].extend(data_rich[i].loc[data_rich[i].trait == trait, "richness_zoo"].values)
-            
-            
+  
 NFD_all = np.array(NFD_all, dtype = "object")
 rich_all = np.array(rich_all, dtype = "object")
 
 xlim = np.array([ax[0,0].get_xlim(), ax[0,1].get_xlim()])
-color = ["blue", "green"]
+color = ["blue", "red"]
+lw = 3
 for k in range(2):
     for j in range(2):
         for i in range(2):
@@ -55,29 +56,23 @@ for k in range(2):
                                                  rich_all[i,j,k])
             ls = "-" if p<.05/12 else "--"
             ax[k,j].plot(xlim[j], xlim[j]*s +intercept, ls, color = color[i],
-                         label = "$R^2={}$".format(np.round(r**2,2)))
+                         label = "$R^2={}$".format(np.round(r**2,2)), lw = lw)
         
         s, intercept, r, p, std = linregress(NFD_all[0,j,k] + NFD_all[1,j,k],
                                                  rich_all[0,j,k]+rich_all[1,j,k])
         ls = "-" if p<.01 else "--"
-        ax[k,j].plot(xlim[j], xlim[j]*s +intercept, ls, color = "cyan",
-                         label = "$R^2={}$".format(np.round(r**2,2)))
+        ax[k,j].plot(xlim[j], xlim[j]*s +intercept, ls, color = "purple",
+                         label = "$R^2={}$".format(np.round(r**2,2)), lw = lw)
 
 for a in ax.flatten():
-    a.legend()
+    leg = a.legend()
+    a.add_artist(leg)
+    
+# legend for dots
+ax[0,0].plot(np.nan,np.nan, **style[0], label = "Change in Trait Mean")
+ax[0,0].plot(np.nan, np.nan, **style[1], label = "Change in Trait Correlation")
 
-# add reference values for fitness differences
-ref = pd.read_csv("data/NFD_ref.csv")
-sig = 2
-mean_ref = np.nanmean(ref, axis=0)
-std_ref = np.nanstd(ref, axis=0)
-bounds = mean_ref + sig * std_ref * [[-1], [0], [1]]
-
-for i, var in enumerate([0,7]):
-    for j in range(2):
-        ax[j,i].axvline(bounds[0,var], color = "red", ls = "--")
-        ax[j,i].axvline(bounds[1,var], color = "red", ls = "-")
-        ax[j,i].axvline(bounds[2,var], color = "red", ls = "--")
+ax[0,0].legend(handles = list(ax[0,0].get_lines())[-2:], loc = "lower right")
         
 for i, a in enumerate(ax.flatten()):
     a.set_title(ABC[i], loc = "left")

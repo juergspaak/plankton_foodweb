@@ -60,8 +60,10 @@ for i, trait in enumerate(["phyto", "zoo"]):
         ax[i+1,j].set_yticklabels(data[trait + "_" + response].columns)
         fig.colorbar(cmap, ax = ax[i+1, j])
         
+for i, a in enumerate(ax.flatten()):
+    a.set_title("ABCDEF"[i], loc = "left")
 fig.tight_layout()
-fig.savefig("Figure_assembly_correlation_matrix.pdf")
+fig.savefig("Figure_ap_assembly_correlation_matrix.pdf")
 #"""
 
 ###############################################################################

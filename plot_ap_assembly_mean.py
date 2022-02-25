@@ -61,4 +61,4 @@ for i in range(2):
 ax[0,0].set_ylabel("Phytoplankton\nRichness")
 ax[1,0].set_ylabel("Zooplankton\nRichness")  
     
-fig.savefig("Figure_ap_assembly_mean.pdf")
+fig.savefig("Figure_assembly_mean.pdf")

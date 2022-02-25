@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 data = np.load("data/assembly_long_60_1000_0.npz")
+data = np.load("data/assembly_phyto_only_20_1000_5.npz")
 
 ###############################################################################
 # plot results    

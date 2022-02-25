@@ -28,7 +28,6 @@ def fun(x, A, tri, trj):
 path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
 
 for i in range(n_prec):
-
     for j,tradeoff in enumerate(corrs):
         tri, trj = tradeoff.split(":")
         print(i,j, tri, trj)

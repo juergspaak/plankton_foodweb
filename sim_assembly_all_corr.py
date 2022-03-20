@@ -74,7 +74,7 @@ ax[0,1].axvline(np.amax(np.linalg.eigvalsh(gp.zt.corr_zoop), axis = -1)/len(gp.z
 ax[1,1].axvline(np.amax(np.linalg.eigvalsh(gp.zt.corr_zoop), axis = -1)/len(gp.zt.corr_zoop), color = "k")
 
 
-ax[1,0].set_xlabel("MAx eigvalue")
+ax[1,0].set_xlabel("Max eigvalue")
 ax[1,1].set_xlabel("max eigvalue")
 
 ax[1,0].set_ylabel("Phyto richness")

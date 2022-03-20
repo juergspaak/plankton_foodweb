@@ -1,0 +1,38 @@
+Morphotype number,Morphotype name,,Defense,r,Phosphate affinity,Cell volume,Taxonomic group
+1,Anabaena spp.,,0.66,0.88,94,170.00,cyanobacteria
+2,Asterionella formosa,,0.79,1.6,56,810.00,diatoms
+3,Aulacoseira spp.,,0.77,1.5,18,870.00,diatoms
+4,Ceratium hirundinella,,0.89,0.24,1600,40000.00,dinophytes
+5,Chlamydomonas spp.,,0.38,1.8,170,210.00,chlorophyta
+6,Chlorella spp,,0.69,1.7,45,28.00,chlorophyta
+7,Chrysochromulina parva,,0.73,1,160,250.00,haptophytes
+8,Cosmarium spp.,,0.84,0.95,72,5700.00,chlorophyta
+9,Cryptomonas marssonii,,0.49,1.1,190,1800.00,cryptomonads
+10,Cryptomonas rostratiformis,,0.5,1.1,200,3200.00,cryptomonads
+11,Cryptomonas spp.,,0.45,1.2,140,1700.00,cryptomonads
+12,Cyclotella spp.,,0.77,1.6,3.6,420.00,diatoms
+13,"Cymbella ventricosa & C.
+prostrata",,0.54,1.8,150,320.00,diatoms
+14,Diatoma spp.,,0.76,1.4,210,1400.00,diatoms
+15,Dinobryon spp.,,0.85,0.74,110,360.00,chrysophytes
+16,Erkenia subaequiciliata,,0.47,1.7,220,100.00,chrysophytes
+17,Eudorina elegans,,0.78,1.1,32,1300.00,chlorophyta
+18,Fragilaria crotonensis,,0.84,1.3,50,1200.00,diatoms
+19,Mallomonas spp.,,0.8,0.5,340,2700.00,chrysophytes
+20,Mougeotia spp.,,0.77,1.5,87,1200.00,chlorophyta
+21,Navicula spp.,,0.54,1.8,150,320.00,diatoms
+22,Nitzschia spp.,,0.54,1.8,150,320.00,diatoms
+23,Oocystis spp.,,0.6,1.5,190,510.00,chlorophyta
+24,Oscillatoria spp.,,0.53,1,99,23.00,cyanobacteria
+25,Pandorina morum,,0.82,0.92,46,2300.00,chlorophyta
+26,Pediastrum spp.,,0.69,1.3,310,790.00,chlorophyta
+27,Peridinium spp.,,0.912,0.24,130,15000.00,dinophytes
+28,Phacotus spp.,,0.34,1.6,430,400.00,chlorophyta
+29,Rhodomonas spp.,,0.1,1.7,550,250.00,cryptomonads
+30,Scenedesmus spp.,,0.63,2.1,45,160.00,chlorophyta
+31,Sphaerocystis schroeteri,,0.83,1.1,57,720.00,chlorophyta
+32,Staurastrum spp.,,0.85,0.84,150,12000.00,chlorophyta
+33,Stephanodiscus neoastraea,,0.66,1.7,22,1500.00,diatoms
+34,Stephanodiscus spp.,,0.64,1.8,13,580.00,diatoms
+35,Synedra spp.,,0.66,1.7,420,1300.00,diatoms
+36,Tabellaria fenestrata,,0.8,1.2,210,2700.00,diatoms

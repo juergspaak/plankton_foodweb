@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import linregress
-from scipy.special import lambertw
 import warnings
 
 import phytoplankton_traits as pt
@@ -218,6 +217,7 @@ def generate_conditional_zooplankton_traits(phyto):
 
 
 if __name__ == "__main__":
+    # plot distribution of zooplankton traits
     import matplotlib.pyplot as plt
     import generate_plankton as gp
     import plankton_growth as pg

@@ -68,6 +68,7 @@ def convert_ode_to_log(logN, t, env):
 
 ###############################################################################
 if __name__ == "__main__":
+    # simulate example dynamics over time
     import matplotlib.pyplot as plt
     from scipy.integrate import solve_ivp
     import generate_plankton as gp

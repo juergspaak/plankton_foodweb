@@ -254,6 +254,8 @@ def generate_phytoplankton_traits(r_spec = 1, n_com = 100,
     return trait_dict
 
 if __name__ == "__main__":
+    # show distribution of phytoplankton traits
+    
     import matplotlib.pyplot as plt
     from generate_plankton import generate_base_traits
     

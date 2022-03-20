@@ -4,7 +4,6 @@ import warnings
 import zoop_traits as zt
 uc = zt.uc
 import phytoplankton_traits as pt
-import plankton_growth as pg
 
 """
 traits and their meaning
@@ -392,7 +391,9 @@ def select_i(traits, env, i = None):
     env_i = {key: env[key][i] for key in env.keys()}
     return tr_i, env_i,i
 
-if __name__ == "__main__" and False:
+if __name__ == "__main__":
+    # show distribution of combined traits h_zp and s_zp
+    
     import matplotlib.pyplot as plt
     
     # generate phytoplankton communities
@@ -414,20 +415,6 @@ if __name__ == "__main__" and False:
     print(np.sum(ind1), np.sum(ind2), np.sum(ind1&ind2))
     
     bins = np.linspace(0,20, 100)
-    fig, ax = plt.subplots(2,1, figsize = (7,5))
-    for i in ["P_n", "P_p", "P_l", "P_res", "P"]:
-        ax[0].hist(np.log(traits["N_star_"+i].flatten()),
-                   alpha = 0.5, bins = bins, label = i
-                 ,density = True, histtype="step")
-    ax[0].legend()
-    ax[0].set_xlabel("Phytoplankton densities (\mum^3 ml^-1")
-    
-    ax[1].hist(np.log(traits["N_star_Z"]).flatten(), density = True,
-               bins = bins)
-    
-    fig.tight_layout()
-    fig.savefig("Figure_equilibrium_densities_phytoplankton.pdf")
-    
 
     # expand dimension of size traits
     traits["size_P"] = np.repeat(traits["size_P"][:,np.newaxis], r_zoo, axis = 1)

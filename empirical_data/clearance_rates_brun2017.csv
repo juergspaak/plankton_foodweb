@@ -1,0 +1,79 @@
+Taxon,Life form,Temperature (°C),Body mass (mg),Body mass type,Fmax,Fmax (15°C),Specific Fmax (15°C),Reference key,Comment
+Acartia (Acanthacartia) tonsa,F,18,0.003,carbon mass,7.645833333,5.614064753,1871.354918,Kiørboe2014,FR
+Acartia (Acanthacartia) tonsa,F,18,0.002484,carbon mass,0.16978209,0.124664978,50.18718936,Kiørboe2014,FR
+Acartia (Acanthacartia) tonsa,?,17,2.11632E-05,carbon mass,0.007962304,0.00648048,306.2145035,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,3.81413E-05,carbon mass,0.025179016,0.020493076,537.2937679,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.000111304,carbon mass,0.091947253,0.074835412,672.3501779,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.000291821,carbon mass,0.134045255,0.109098766,373.8550897,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.000447881,carbon mass,0.261996941,0.213238007,476.1041589,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.00061054,carbon mass,0.378763953,0.308274097,504.9202028,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.000946652,carbon mass,0.653213318,0.531647069,561.6075634,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.001245197,carbon mass,0.956611294,0.778581173,625.2674233,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.001245197,carbon mass,1.256257591,1.022461803,821.1244758,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.001637894,carbon mass,1.126526522,0.916874332,559.7886652,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.001901384,carbon mass,1.018647802,0.829072378,436.0363331,Kiørboe2014,Fmax
+Acartia (Acanthacartia) tonsa,?,17,0.003528735,carbon mass,3.350535333,2.726984038,772.7936559,Kiørboe2014,Fmax
+Acartia (Acartiura) clausi,?,15,0.005,carbon mass,0.62436144,0.62436144,124.872288,Kiørboe2014,FR
+Acartia (Acartiura) hudsonica,?,4.5,0.00679,carbon mass,0.93,2.741567111,403.7654066,Kiørboe2014,FR
+Acartia (Acartiura) hudsonica,?,8,0.00594,carbon mass,0.87,1.788668565,301.1226541,Kiørboe2014,FR
+Acartia (Acartiura) hudsonica,?,12,0.00442,carbon mass,1,1.361906866,308.1237254,Kiørboe2014,FR
+Acartia (Acartiura) hudsonica,?,16,0.00388,carbon mass,0.97,0.875096468,225.5403269,Kiørboe2014,FR
+Acartia (Odontacartia) erythraea,?,20,0.00458,carbon mass,1.32,0.788850882,172.2381839,Kiørboe2014,FR
+Aetideus divergens,F,12,0.02124,carbon mass,12.04583333,16.40530312,772.3777366,Kiørboe2014,FR
+Calanus finmarchicus,?,13,0.10431,carbon mass,7.368421053,9.053281846,86.79207982,Kiørboe2014,Fmax
+Calanus finmarchicus,?,13,0.10431,carbon mass,2.80125,3.441782926,32.99571399,Kiørboe2014,FR
+Calanus finmarchicus,?,13,0.10431,carbon mass,1.206666667,1.482582679,14.21323631,Kiørboe2014,FR
+Calanus pacificus,CI,15,0.001506,carbon mass,1.22889625,1.22889625,816.000166,Kiørboe2014,FR
+Calanus pacificus,F,12.5,0.0765,carbon mass,9.105958,11.7791825,153.9762419,Kiørboe2014,FR
+Calanus pacificus,F,12.5,0.0765,carbon mass,13.168855,17.03481901,222.6773726,Kiørboe2014,FR
+Calanus pacificus,F,12.5,0.0765,carbon mass,17.392146,22.49793617,294.0906689,Kiørboe2014,FR
+Calanus pacificus,NV,15,0.000823,carbon mass,0.708252917,0.708252917,860.5746254,Kiørboe2014,FR
+Calanus pacificus,NVI,15,0.0011676,carbon mass,0.749044583,0.749044583,641.5249943,Kiørboe2014,FR
+Calanus pacificus,NIII,15,0.000384,carbon mass,0.064425833,0.064425833,167.7756076,Kiørboe2014,FR
+Calanus pacificus,NIV,15,0.000479,carbon mass,0.2539175,0.2539175,530.0991649,Kiørboe2014,FR
+Calanus sinicus,?,20,0.0518,carbon mass,5.74,3.430306109,66.22212565,Kiørboe2014,FR
+Centropages tenuiremis,?,20,0.0096,carbon mass,2.72,1.625510909,169.324053,Kiørboe2014,FR
+Clausocalanus lividus,F,13.9,0.0199,carbon mass,4.497585,5.036939834,253.1125545,Kiørboe2014,FR
+Clausocalanus lividus,F,13.9,0.0181,carbon mass,7.80104,8.73654842,482.6822331,Kiørboe2014,FR
+Ditrichocorycaeus anglicus,?,11,0.0024,carbon mass,0.159753,0.241163865,100.4849437,Kiørboe2014,FR
+Euterpina acutifrons,?,19,0.0014,carbon mass,1.2,0.794910134,567.7929526,Kiørboe2014,Fmax
+Euterpina acutifrons,F,18,0.0014,carbon mass,0.833333333,0.611887166,437.0622618,Kiørboe2014,Fmax
+Oithona davisae,F,21,0.00025,carbon mass,0.2,0.107828901,431.315602,Kiørboe2014,FR
+Oithona davisae,M,22,0.000187829,carbon mass,0.098,0.04766674,253.7777254,Kiørboe2014,FR
+Oithona davisae,N,20,0.0000322,carbon mass,0.00784,0.004685296,145.5060916,Kiørboe2014,FR
+Oithona davisae,N,20.5,0.0000894,carbon mass,0.015833333,0.008987428,100.5305177,Kiørboe2014,FR
+Oithona davisae,N,20.5,0.0000923,carbon mass,0.01625,0.00922394,99.93433965,Kiørboe2014,FR
+Oithona davisae,N,20.5,0.0001011,carbon mass,0.019166667,0.010879518,107.6114584,Kiørboe2014,FR
+Oithona davisae,N,20.5,0.000147,carbon mass,0.02375,0.013481142,91.70845183,Kiørboe2014,FR
+Oithona davisae,C,20.5,0.0002327,carbon mass,0.04625,0.026252751,112.8180104,Kiørboe2014,FR
+Oithona davisae,F,18,0.00025,carbon mass,0.304166667,0.223338816,893.3552631,Kiørboe2014,FR
+Oithona nana,F,10,0.00023,carbon mass,0.372083333,0.622614503,2707.019579,Kiørboe2014,FR
+Oithona nana,M,10,0.00021,carbon mass,0.430125,0.719736788,3427.318037,Kiørboe2014,FR
+Oithona similis,C,19,0.00036,carbon mass,0.38,0.251721542,699.2265065,Kiørboe2014,Fmax
+Oithona similis,F,8.5,0.00036,carbon mass,0.08525,0.166474266,462.4285159,Kiørboe2014,FR
+Oithona similis,F,8.5,0.00036,carbon mass,0.079,0.154269408,428.5261321,Kiørboe2014,FR
+Oncaea mediterranea,?,20,3.82819E-05,carbon mass,0.008266855,0.004940391,129.0530608,Kiørboe2014,FR
+Oncaea mediterranea,?,20,8.87512E-05,carbon mass,0.015077635,0.00901061,101.5266545,Kiørboe2014,FR
+Oncaea mediterranea,?,20,0.000121848,carbon mass,0.015990614,0.00955622,78.42721461,Kiørboe2014,FR
+Oncaea mediterranea,?,20,0.000155799,carbon mass,0.040166607,0.024004139,154.0712246,Kiørboe2014,FR
+Oncaea mediterranea,?,20,0.000315322,carbon mass,0.078716129,0.047041885,149.1865855,Kiørboe2014,FR
+Oncaea mediterranea,?,20,0.000455903,carbon mass,0.067294353,0.040216068,88.21182002,Kiørboe2014,FR
+Oncaea mediterranea,?,20,0.00057544,carbon mass,0.171258596,0.102346587,177.8580212,Kiørboe2014,FR
+Oncaea mediterranea,?,20,0.00094689,carbon mass,0.077188587,0.046129004,48.71633029,Kiørboe2014,FR
+Oncaea mediterranea,?,20,0.000959219,carbon mass,0.083482538,0.049890359,52.0114484,Kiørboe2014,FR
+Paracalanus parvus,?,20,0.0027,carbon mass,0.8368,0.50008365,185.2161667,Kiørboe2014,FR
+Paracartia grani,N,20,0.0000401,carbon mass,0.01568416,0.009373078,233.7426028,Kiørboe2014,FR
+Paraeuchaeta elongata,?,8,0.637,carbon mass,57.3,117.8054124,184.937853,Kiørboe2014,FR
+Paraeuchaeta norvegica,?,7.5,1.35,carbon mass,103.5,224.0313899,165.9491777,Kiørboe2014,FR
+Parvocalanus crassirostris,?,18,0.004185,carbon mass,0.5908392,0.433832309,103.6636341,Kiørboe2014,FR
+Parvocalanus crassirostris,?,18,0.004185,carbon mass,0.561627,0.412382824,98.53830929,Kiørboe2014,FR
+Parvocalanus crassirostris,?,18,0.004185,carbon mass,0.65,0.47727199,114.0434862,Kiørboe2014,Fmax
+Pseudodiaptomus marinus,?,20,0.00462,carbon mass,1.129,0.67470655,146.0403788,Kiørboe2014,FR
+Tortanus,C,25,0.0011,carbon mass,2.708333333,0.967261905,879.3290043,Kiørboe2014,FR
+Tortanus,C,20,0.0011,carbon mass,1.458333333,0.871520861,792.2916918,Kiørboe2014,FR
+Tortanus,F,20,0.00562,carbon mass,5.833333333,3.486083444,620.2995452,Kiørboe2014,FR
+Tortanus,C,20,0.00223,carbon mass,3.3,1.972127205,884.3619755,Kiørboe2014,FR
+Tortanus,M,20,0.0034,carbon mass,3.091666667,1.847624225,543.4188898,Kiørboe2014,FR
+Tortanus (Boreotortanus) discaudatus,?,12.5,0.018081,carbon mass,66.90909091,86.55150759,4786.876146,Kiørboe2014,FR
+Tortanus (Eutortanus) dextrilobatus,?,14,0.02442,carbon mass,20.11666667,22.29830353,913.1164426,Kiørboe2014,FR
+Tortanus (Tortanus) forcipatus,?,21,0.006160369,carbon mass,8.433333333,4.546785304,738.0703028,Kiørboe2014,FR

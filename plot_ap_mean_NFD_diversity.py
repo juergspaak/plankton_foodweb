@@ -125,4 +125,4 @@ ax[2,1].set_yticks([-1,-.5,0])
 ax[2,2].set_ylabel("Fitness differecnes", fontsize = fs)
     
 fig.tight_layout()
-fig.savefig("Figure_mean_NFD_diversity.pdf")
+fig.savefig("Figure_ap_mean_NFD_diversity.pdf")

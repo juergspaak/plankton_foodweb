@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from string import ascii_uppercase as ABC
-from layouts import labels, color, ax_id
 from scipy.stats import linregress
 
 data_mean = pd.read_csv("data/assembly_mean.csv")

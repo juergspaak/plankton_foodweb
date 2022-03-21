@@ -1,3 +1,9 @@
+"""
+This file runs simulations with altered variance for phytoplankton and zooplankton
+traits
+"""
+
+
 import numpy as np
 from assembly_time_fun import assembly_richness
 import generate_plankton as gp

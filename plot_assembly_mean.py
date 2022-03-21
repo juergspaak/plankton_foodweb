@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import generate_plankton as gp
+
 from layouts import labels, color, ax_id
 
 data = pd.read_csv("data/assembly_mean.csv")

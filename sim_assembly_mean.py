@@ -1,6 +1,10 @@
-import numpy as np
+"""
+This file runs simulations with altered means for phytoplankton and zooplankton
+traits
+"""
 
-import sys
+
+import numpy as np
 
 from assembly_time_fun import assembly_richness
 import generate_plankton as gp

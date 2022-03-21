@@ -118,4 +118,4 @@ for a in ax[2:,-1]:
     a.set_title("", loc = "left")
         
 fig.tight_layout()
-fig.savefig("Figure_correlation_NFD_diversity.pdf")
+fig.savefig("Figure_ap_correlation_NFD_diversity.pdf")

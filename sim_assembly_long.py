@@ -1,6 +1,9 @@
-import numpy as np
+"""
+This file runs assembly simulations for a longer time to observe whether
+species richness would increase in a longer time period
+"""
 
-import sys
+import numpy as np
 
 from assembly_time_fun import assembly_richness
 import generate_plankton as gp

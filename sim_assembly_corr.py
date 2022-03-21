@@ -1,3 +1,9 @@
+"""
+This file runs simulations with altered correlations for the phytoplankton
+and zooplankton traits
+"""
+
+
 import numpy as np
 import warnings
 from scipy.optimize import brentq

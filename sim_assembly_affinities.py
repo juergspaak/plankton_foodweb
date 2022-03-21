@@ -1,3 +1,8 @@
+"""
+This file runs simulations with altered correlations for the resource affinities
+of the competing phytoplankton species
+"""
+
 import numpy as np
 from scipy.optimize import brentq
 import warnings

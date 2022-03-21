@@ -56,4 +56,3 @@ for i, a in enumerate(ax.flatten()):
     a.axvline(1, color = "k")
     
 fig.savefig("Figure_ap_assembly_var.pdf")
-fig.savefig("PP_slides/Change_in_variance.png")

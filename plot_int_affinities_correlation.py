@@ -45,4 +45,4 @@ for i in range(2):
     ax[i].axhline(bounds[1,i], color = "red", linestyle = "--")
     ax[i].axhline(mean_ref[i], color = "red")
     
-fig.savefig("Figure_ap_affinities_correlation.pdf")
+fig.savefig("Figure_int_affinities_correlation.pdf")

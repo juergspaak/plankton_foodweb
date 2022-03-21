@@ -1,6 +1,11 @@
-import numpy as np
+"""
+This file runs simulations where not all resources are limiting or
+where zooplankton are not present.
+This is achieved by changing the resource requirements or the mortality
+rate of zooplankton
+"""
 
-import sys
+import numpy as np
 
 from assembly_time_fun import assembly_richness
 import generate_plankton as gp

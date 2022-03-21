@@ -121,4 +121,4 @@ ax[0,1].legend(["Phytoplankton", "Zooplankton"])
 for i, a in enumerate(ax.flatten()):
     a.set_title("ABCDEF"[i])
     
-fig.savefig("Figure_ap_timeseries.pdf")
+fig.savefig("Figure_int_timeseries.pdf")

@@ -14,7 +14,7 @@ except ModuleNotFoundError:
     pass
 
 def evolve_time(N, ti, envi, time):
-    sol = solve_ivp(lambda t,logN: pg.convert_ode_to_log(logN, ti, envi),
+    sol = solve_ivp(lambda t,logN: pg.convert_ode_to_log(logN, ti, envi, t),
                         time, np.log(N), method = "LSODA")
     # compute new r_spec, based on last 20 percent of time
     p = 0.5

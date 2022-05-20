@@ -28,6 +28,7 @@ def grazing(N_phyto,t):
     return numerator/np.expand_dims(denom,-1)
 
 def per_cap_plankton_growth(N, t, env):
+    
     N = N.copy()
     N[~(1e-8<N)] = 1e-8 # species with too small densities cause numerical problems
     # separate densities into phytoplankton and zooplankton
@@ -46,6 +47,7 @@ def per_cap_plankton_growth(N, t, env):
              - uc["h_day"]/uc["ml_L"]*np.einsum("...z,...zp->...p", N_zoo, grazed)
              - env["d"])
     
+    # change in resources
     dres_dt = np.array([env["d"]*(env["N"] - res[...,0]) -
                      uc["ml_L"]*np.sum(t["c_n"]*growth_P*N_phyto, axis = -1),
               env["d"]*(env["P"] - res[...,1])
@@ -56,12 +58,19 @@ def per_cap_plankton_growth(N, t, env):
 def plankton_growth(N, t, env):
     return N*per_cap_plankton_growth(N, t, env)
 
-def convert_ode_to_log(logN, t, env):
+def convert_ode_to_log(logN, t, env, time = 0):
+    
+    # find current environmental settings
+    env_c = {
+        R: env[R]*(1 + env["ampl_"+R]
+        *np.sin(2*np.pi*time/env["freq_"+R] + env["phase_"+R])) 
+        for R in ["N", "P", "I_in", "d", "zm"]}
+    
     with warnings.catch_warnings(record = True):
         N = np.exp(logN)
         N[N>1e20] = 1e20 # prevent overflow
     # dlog(N)/dt = 1/N dN/dt
-    return per_cap_plankton_growth(N, t, env)
+    return per_cap_plankton_growth(N, t, env_c)
 
 ###############################################################################
 if __name__ == "__main__":
@@ -69,55 +78,15 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from scipy.integrate import solve_ivp
     import generate_plankton as gp
-    r_phyto = 4
-    r_zoo = 1
-    n_coms = int(1e4)
-    traits, env = gp.generate_communities(r_phyto, n_coms)
     
-    """
-    # test whether all equilibria are computed correctly
-    N = np.append(traits["N_star_P"], traits["N_star_Z"], axis = 1)
+    from assembly_time_fun import assembly_richness
     
-    # multispecies equilibrium
-    if np.amax(np.abs(plankton_growth(N, traits, env)))>1e-8:
-        raise ValueError("Community equilibrium not computed correctly")
-        
-    if r_phyto == 1:    
-        if np.amax(np.abs(nitrogen_growth(traits["N_star_P_n"], traits, env)
-                          -env["d"]))>1e-8:
-            raise ValueError("Nitrogen equilibrium not computed correctly")
-            
-        if np.amax(np.abs(phosphor_growth(traits["N_star_P_p"], traits, env)
-                          -env["d"]))>1e-8:
-            raise ValueError("Nitrogen equilibrium not computed correctly")
-        
-        # competition for light
-        if np.amax(np.abs(light_growth(traits["N_star_P_l"], traits, env)
-                          -env["d"]))>1e-8:
-            pass # returns correct for most, some converge not fast enough
-            #raise ValueError("Light equilibrium not computed correctly")
-    """
-    
-    # select a random community and simulate it
-    ti, envi, i = gp.select_i(traits, env)
-    
-    # add environmental noise
-    N = np.concatenate(([envi["N"], envi["P"]],ti["N_star_P"], ti["N_star_Z"]), axis = 0)
-    err = 1e-0
-    N *= np.random.uniform(1-err,1+err,N.shape)
-       
-    
-    time = [0,1000]
-    
-    fig, ax = plt.subplots(3, sharex = True)
-    
-    
-    sol = solve_ivp(lambda t, logN: convert_ode_to_log(logN, ti, envi),
-                         time, np.log(N), method = "LSODA")   
-    
-    ax[0].semilogy(sol.t, np.exp(sol.y[:2]).T, '-')
-    ax[1].semilogy(sol.t, np.exp(sol.y[2:(2+r_phyto)]).T, '-')
-    ax[2].semilogy(sol.t, np.exp(sol.y[2 + r_phyto:]).T, '--')
-    
-    ax[1].set_ylim([1e-5, None])
-    ax[2].set_ylim([1e-3, None])
+    n_spec = 20
+    n_coms = 5
+    traits = gp.generate_plankton(n_spec, n_coms)
+    env = gp.generate_env(n_coms, fluct_env=["N", "P", "I_in"])
+    traits = gp.phytoplankton_equilibrium(traits, env)
+
+    # simulate densities
+    richness, present, res, dens = assembly_richness(
+                    traits, env, plot_until = 5, ret_all = True)

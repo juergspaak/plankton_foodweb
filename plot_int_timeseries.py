@@ -6,13 +6,14 @@ from assembly_time_fun import evolve_time, select_survivors
 import generate_plankton as gp
 from timeit import default_timer as timer
 
-np.random.seed(hash("Fancy projecat")%(2**32-1))
+np.random.seed(hash("Fancy project")%(2**32-1))
 
 start = timer()
 n_coms = 2
 traits = gp.generate_plankton(20, n_coms)
-env = gp.generate_env(n_coms)
+env = gp.generate_env(n_coms, fluct_env=["N"])
 traits = gp.phytoplankton_equilibrium(traits, env)
+env["freq_N"][:] = 1
 
 ti, envi, i = gp.select_i(traits, env, 0)
 

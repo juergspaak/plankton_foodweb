@@ -50,16 +50,18 @@ env = {"I_in": 100,
        "P": 50,
        "N": 250,
        "d": 0.1,
-       "zm": 10}
+       "zm": 10,
+       "temp": 25}
 
 def generate_env(n_coms, I_in = [50,200], P = [5,20], N = [10,100],
-                 d = [0.05,0.2], zm = [10,100], fluct_env = []):
+                 d = [0.05,0.2], zm = [10,100], temp = [15,25],
+                 fluct_env = []):
     env = {"I_in": np.random.uniform(*I_in, (n_coms)),
                    "P": np.random.uniform(*P, (n_coms)),
                    "N": np.random.uniform(*N, (n_coms)),
                    "d": np.random.uniform(*d, (n_coms)),
                    "zm": np.random.uniform(*zm, (n_coms))}
-    for key in ["N", "P", "I_in", "zm", "d"]:
+    for key in ["N", "P", "I_in", "zm", "d", "temp"]:
         if key in fluct_env:
             env["freq_" + key] = np.random.uniform(1,100, (n_coms))
             env["phase_" + key] = np.random.uniform(0, 2*np.pi, n_coms)

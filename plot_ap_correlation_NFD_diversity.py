@@ -96,6 +96,9 @@ for i, a in enumerate(ax.flatten()):
     a.set_xticks([-1,0,1])
     a.set_xticklabels(3*[""])
     
+for i, a in enumerate(ax[-1]):
+    a.set_title("LMNO"[i], loc = "left")
+    
 for a in ax[[-1,-1,-1,1], np.arange(4)]:
     a.set_xticklabels([-1,0,1])
     a.set_xlabel("Correlation", fontsize = fs)

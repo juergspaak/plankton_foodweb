@@ -42,8 +42,6 @@ del phyto_data["mu_n"], phyto_data["mu_p"]
 with warnings.catch_warnings(record = True):
     phyto_data = np.log(phyto_data)
     
-raw_data = raw_data.append(phyto_data, ignore_index=True)
-    
 allo_scal.update(dict(k_p = 1/3, k_n = 1/3, c_p = 2/3, c_n = 2/3, size_P = 1,
                       R_P = 0.8, mu_P = -0.25))
 
@@ -61,8 +59,6 @@ light_data = light_data[["mu_l",# maximum light growth rate [day^-1]
 light_data = np.log(light_data)
 light_data.columns = ["mu_P", "k_l"]
 
-raw_data = raw_data.append(light_data, ignore_index=True)
-
 ##############################################################################
 # data from ehrlich 2019
 # defense data
@@ -71,8 +67,6 @@ defense_data = defense_data[["Cell volume", "r", "Defense"]]
 defense_data.columns = ["size_P", "mu_P", "e_P"]
 defense_data["e_P"] = 1 - defense_data["e_P"]
 defense_data = np.log(defense_data)
-
-raw_data = raw_data.append(defense_data, ignore_index=True)
 
 ##############################################################################
 # data from augusti1989
@@ -83,8 +77,11 @@ augusti["a"] = augusti["a"]*1e-6 # convert \mum^2 to mm^2
 del augusti["d"]
 augusti = np.log(augusti)
 
-raw_data = raw_data.append(augusti, ignore_index=True)
 allo_scal["a"] = 0.77
+
+# combine all information
+raw_data = pd.concat([raw_data, phyto_data, light_data, defense_data, augusti]
+                     , ignore_index = True)
 ###############################################################################
 mean_phyto = pd.DataFrame(columns = phyto_traits, index = [1])
 std_phyto = pd.DataFrame(columns = phyto_traits, index = [1])

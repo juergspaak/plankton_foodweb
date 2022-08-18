@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 
 # parameters of the eppeley curve, cite from Norberg 2004
-a = 0.59
-b = 0.0633
+a_epp = 0.59
+b_epp = 0.0633
 temp = np.linspace(0,40,101)
 
 # load empirical data
@@ -30,6 +30,11 @@ for key in temp_traits.columns:
     var[(iqr[0]>var) | (iqr[1]<var)] = np.nan
     temp_normal.loc["mean", key] = np.nanmean(var)
     temp_normal.loc["sig", key] = np.nanstd(var)
+
+##############################################################################
+# zooplankton temperature traits
+Q_mu = 2.72-1.96*0.26 # minimal Q10 from Hansen & Bjornsen 1997
+exp_mu = np.log(Q_mu)/10 # exponential factor for 
 
 if __name__ == "__main__":
     fig, ax = plt.subplots(2,2, figsize = (9,9), sharex = "col")
@@ -64,9 +69,9 @@ if __name__ == "__main__":
     for i, row in temp_traits.iterrows():
         if i >20:
             continue
-        ax[1,0].plot(temp, a*np.exp(b*temp)*
+        ax[1,0].plot(temp, a_epp*np.exp(b_epp*temp)*
                      (1-4*(temp - row["T_opt"])**2/row["T_sig"]**2))
-    ax[1,0].plot(temp, a*np.exp(b*temp), 'k')
+    ax[1,0].plot(temp, a_epp*np.exp(b_epp*temp), 'k')
     
     ax[1,0].set_ylim([0, None])
     ax[1,0].set_xlabel("Temperature")

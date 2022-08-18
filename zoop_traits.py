@@ -34,7 +34,6 @@ growth.mu_Z *= uc["h_day"]
 growth = np.log(growth)
 growth = growth[np.isfinite(growth.mu_Z)]
 
-raw_data = raw_data.append(growth, ignore_index=True)
 allo_scal["mu_Z"] = 0
 
 ########################
@@ -46,7 +45,6 @@ clear.columns = ["size_Z", "c_Z"]
 #change clearance rate from ml to \mul
 clear = np.log(clear)
 
-raw_data = raw_data.append(clear, ignore_index=True)
 allo_scal["c_Z"] = 1
 
 ########################
@@ -54,7 +52,6 @@ mortality = pd.read_csv("empirical_data/Hirst_Kiorboe_2002.csv")
 mortality["size_Z"] /= 1000 # convert \mug to mg
 mortality["size_Z"] *= 0.1 # convert DV to mg C
 mortality = np.log(mortality)
-raw_data = raw_data.append(mortality, ignore_index = True)
 allo_scal["m_Z"] = -0.092 # value from Hirst_Kiorboe_2002
 
 ########################
@@ -77,6 +74,8 @@ if s_res -1.96*std_res < np.round(s_res) < s_res + 1.96*std_res:
     
 #raw_data["k_Z"] = np.full(2, 0)
 allo_scal["k_Z"] = s_res
+
+raw_data = pd.concat([raw_data, growth, clear, mortality], ignore_index = True)
 
 ###############################################################################
 # empirically measured sizes
@@ -113,7 +112,7 @@ for i,trait in enumerate(zoop_traits):
         if i != j: # different traits
             corr_theory.loc[trait, traitj] = (allo_scal[trait]*allo_scal[traitj]
                         *size_var
-                        /(std_zoop[trait]*std_zoop[traitj])).values
+                        /(std_zoop[trait]*std_zoop[traitj])).values[0]
             n_measurments.loc[trait, traitj] = np.sum(np.isfinite(
                                         raw_data[trait]*raw_data[traitj]))
 

@@ -43,6 +43,9 @@ def select_survivors(ti, ind_phyto, ind_zoo):
     for trait in gp.zt.zoop_traits:
         tc[trait] = ti[trait][ind_zoo]
         
+    for trait in ["T_sig", "T_opt", "a_1", "a_2", "b_1", "b_2"]:
+        tc[trait] = ti[trait][ind_phyto]
+        
     tc["h_zp"] = ti["h_zp"][ind_zoo]
     tc["h_zp"] = tc["h_zp"][:,ind_phyto]
     tc["s_zp"] = ti["s_zp"][ind_zoo]

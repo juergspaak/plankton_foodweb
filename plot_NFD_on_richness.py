@@ -60,7 +60,7 @@ for k in range(2):
         s, intercept, r, p, std = linregress(NFD_all[0,j,k] + NFD_all[1,j,k],
                                                  rich_all[0,j,k]+rich_all[1,j,k])
         ls = "-" if p<.01 else "--"
-        ax[k,j].plot(xlim[j], xlim[j]*s +intercept, ls, color = "purple",
+        ax[k,j].plot(xlim[j], xlim[j]*s +intercept, ls, color = "orange",
                          label = "$R^2={}$".format(np.round(r**2,2)), lw = lw)
 
 for a in ax.flatten():
@@ -76,8 +76,8 @@ ax[0,0].legend(handles = list(ax[0,0].get_lines())[-2:], loc = "lower right")
 for i, a in enumerate(ax.flatten()):
     a.set_title(ABC[i], loc = "left")
 
-ax[-1,0].set_xlabel("Niche differences")
-ax[-1,1].set_xlabel("Fitness differences")
+ax[-1,0].set_xlabel("Niche differences\nof zooplankton")
+ax[-1,1].set_xlabel("Fitness differences\nof zooplankton")
 
 ax[0,0].set_ylabel("Phytoplankton\nrichness")
 ax[1,0].set_ylabel("Zooplankton\nrichness")
@@ -100,7 +100,7 @@ plt.plot(xlim, s*xlim + intercept, 'g', label = "$R^2 = {}$".format(np.round(r**
 
 s, intercept, r, p, std = linregress(np.append(data_corr.richness_zoo,data_mean.richness_zoo),
                                      np.append(data_corr.richness_phyto, data_mean.richness_phyto))
-plt.plot(xlim, s*xlim + intercept, color = "cyan", label = "$R^2 = {}$".format(np.round(r**2,2)))
+plt.plot(xlim, s*xlim + intercept, color = "orange", label = "$R^2 = {}$".format(np.round(r**2,2)))
 
 plt.legend()
 
@@ -108,4 +108,15 @@ plt.xlabel("Zooplankton richness")
 plt.ylabel("Phytoplankton richness")
 
 fig.savefig("Figure_ap_phyto_vs_zoo_richness.pdf")
+#"""
 
+###############################################################################
+fig = plt.figure()
+for i, change in enumerate(data_NFD):
+    plt.plot(data_NFD[i].ND_mean_1, data_NFD[i].FD_median_1, **style[i],
+             label = label[i])
+plt.legend()
+
+plt.xlabel("Niche differences")
+plt.ylabel("Fitness differences")
+fig.savefig("Figure_ap_correlation_NFD.pdf")

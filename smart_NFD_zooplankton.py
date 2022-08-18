@@ -221,7 +221,7 @@ except NameError:
     
     traits = traits_select
     
-#traits = gp.generate_plankton(r_phyto, n_com)
+traits = gp.generate_plankton(r_phyto, n_com)
 n_spec = 2 + traits["r_phyto"] + traits["r_zoo"]
 n_com = len(traits_coex["mu_P"])
 

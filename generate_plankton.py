@@ -6,7 +6,7 @@ uc = zt.uc
 import phytoplankton_traits as pt
 import temp_traits as tt
 
-from fit_temperature_traits import generate_temp_traits as gtt
+#from fit_temperature_traits import generate_temp_traits as gtt
 """
 traits and their meaning
 

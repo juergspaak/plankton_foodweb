@@ -34,7 +34,6 @@ growth.mu_Z *= uc["h_day"]
 growth = np.log(growth)
 growth = growth[np.isfinite(growth.mu_Z)]
 
-raw_data = raw_data.append(growth, ignore_index=True)
 allo_scal["mu_Z"] = 0
 
 ########################
@@ -46,7 +45,6 @@ clear.columns = ["size_Z", "c_Z"]
 #change clearance rate from ml to \mul
 clear = np.log(clear)
 
-raw_data = raw_data.append(clear, ignore_index=True)
 allo_scal["c_Z"] = 1
 
 ########################
@@ -54,7 +52,6 @@ mortality = pd.read_csv("empirical_data/Hirst_Kiorboe_2002.csv")
 mortality["size_Z"] /= 1000 # convert \mug to mg
 mortality["size_Z"] *= 0.1 # convert DV to mg C
 mortality = np.log(mortality)
-raw_data = raw_data.append(mortality, ignore_index = True)
 allo_scal["m_Z"] = -0.092 # value from Hirst_Kiorboe_2002
 
 ########################
@@ -77,6 +74,8 @@ if s_res -1.96*std_res < np.round(s_res) < s_res + 1.96*std_res:
     
 #raw_data["k_Z"] = np.full(2, 0)
 allo_scal["k_Z"] = s_res
+
+raw_data = pd.concat([raw_data, growth, clear, mortality], ignore_index = True)
 
 ###############################################################################
 # empirically measured sizes
@@ -113,7 +112,7 @@ for i,trait in enumerate(zoop_traits):
         if i != j: # different traits
             corr_theory.loc[trait, traitj] = (allo_scal[trait]*allo_scal[traitj]
                         *size_var
-                        /(std_zoop[trait]*std_zoop[traitj])).values
+                        /(std_zoop[trait]*std_zoop[traitj])).values[0]
             n_measurments.loc[trait, traitj] = np.sum(np.isfinite(
                                         raw_data[trait]*raw_data[traitj]))
 
@@ -185,36 +184,6 @@ np.exp(zoop_pref)**(1/3)
 
 # variance of noise term
 sig_size_noise = np.sqrt(size_var - pt.size_var)
-"""
-# conditional trait distributions, assuming size is known
-a = zoop_traits[1:]
-s = "size_Z"
-A_num = A_zoop.values
-A_conditional = A_num[1:,1:] - A_num[1:,[0]].dot(1/A_num[0,0]*A_num[[0],1:])
-
-
-
-
-def generate_conditional_zooplankton_traits(phyto):
-    # generate zooplankton assuming they adapted to phyto_sizes
-    size_Z = np.log(phyto["size_P"]*uc["mum3_mg"]*np.exp(zoop_pref))
-    # add noise
-    size_Z = size_Z + np.random.normal(0, sig_size_noise, size_Z.shape)
-    size_Z = size_Z.reshape(-1,1)
-    
-    other_traits = (mean_zoop.values[:,1:] +
-                    A_zoop.loc[a,s].values/
-                    A_zoop.loc[s,s]*(size_Z-mean_zoop["size_Z"].values))
-    other_traits += np.random.multivariate_normal(np.zeros(len(a)),
-                                                  A_conditional,
-                                                  (size_Z.size))
-    trait_dict = {"size_Z": np.exp(size_Z).reshape(phyto["size_P"].shape)}
-    for i, trait in enumerate(zoop_traits[1:]):
-        trait_dict[trait] = np.exp(other_traits[...,i]).reshape(
-                                                        phyto["size_P"].shape)
-    return trait_dict
-"""
-
 
 if __name__ == "__main__":
     # plot distribution of zooplankton traits
@@ -232,9 +201,15 @@ if __name__ == "__main__":
     
     # compute maximum attained growth rate
     traits = gp.phytoplankton_equilibrium(traits, env)
-    N = np.append(traits["N_star_P_res"], np.zeros((n_coms, 1)), axis = 1)
+    N = np.array([traits["R_star_n_res"],
+                  traits["R_star_p_res"], 
+                  traits["N_star_P_res"],
+                  np.full((n_coms, 1), 1e-5)]).T[0]
+    traits["mu_Z_effective"] = np.empty((n_coms,1))
     with warnings.catch_warnings(record = True):
-        traits["mu_Z_effective"] = pg.per_cap_plankton_growth(N,traits, env)[:,r_phyto:]
+        for i in range(n_coms):
+            ti, envi, i= gp.select_i(traits, env, i)
+            traits["mu_Z_effective"][i] = pg.per_cap_plankton_growth(N[i],ti, envi)[-1]
 
     traits = np.array([traits["size_Z"], traits["mu_Z_effective"],
                        traits["c_Z"],  traits["m_Z"], traits["k_Z"]])
@@ -265,6 +240,7 @@ if __name__ == "__main__":
                 ax[i,j].tick_params(axis = "y", colors = "None")
                 ax[i,j].tick_params(axis = "x", colors = "None")
         ax_hist = fig.add_subplot(n,n,1 + (n+1)*i)
+
         ax_hist.hist(traits[:,i], bins, density = True, color = "blue")
         ax_hist.set_xticklabels([])
         ax_hist.set_yticklabels([])

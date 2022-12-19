@@ -18,13 +18,13 @@ ax[1,1].set_xticks(change_trait[[0,len(change_trait)//2,-1]])
 ax[1,0].set_xticklabels(change_trait[[0,len(change_trait)//2,-1]])
 ax[1,1].set_xticklabels(change_trait[[0,len(change_trait)//2,-1]])
 
-ax[0,0].set_title("Growth traits")
-ax[0,1].set_title("Resource traits")
-ax[0,2].set_title("Species interaction\ntraits")
+ax[0,0].set_title("Growth traits", fontsize = 14)
+ax[0,1].set_title("Resource traits", fontsize = 14)
+ax[0,2].set_title("Species interaction\ntraits", fontsize = 14)
 
-ax[-1,0].set_xlabel("Change in Mean")
-ax[-1,1].set_xlabel("Change in Mean")
-ax[-1,2].set_xlabel("Change in Mean")
+ax[-1,0].set_xlabel("Change in Mean", fontsize = 14)
+ax[-1,1].set_xlabel("Change in Mean", fontsize = 14)
+ax[-1,2].set_xlabel("Change in Mean", fontsize = 14)
 
 for i,a in enumerate(ax.flatten()):
     a.set_title("ABCDEF"[i], loc = "left")
@@ -58,7 +58,7 @@ for i in range(2):
         ax[0,j].legend(fontsize = 14)
         
 
-ax[0,0].set_ylabel("Phytoplankton\nRichness")
-ax[1,0].set_ylabel("Zooplankton\nRichness")  
+ax[0,0].set_ylabel("Phytoplankton\nRichness", fontsize = 14)
+ax[1,0].set_ylabel("Zooplankton\nRichness", fontsize = 14)  
     
 fig.savefig("Figure_assembly_mean.pdf")

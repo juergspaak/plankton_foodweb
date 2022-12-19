@@ -1,7 +1,10 @@
 import numpy as np
 from zoop_traits import uc
 import warnings
+from temp_traits import a_epp, b_epp
 #warnings.simplefilter("error", RuntimeWarning)
+
+import generate_plankton as gp
 
 
 def light_growth(N, t, env):
@@ -13,6 +16,7 @@ def light_growth(N, t, env):
 
 
 def phyto_growth(res, N_phyto, t, env):
+    # resource limited growth
     growth = np.array([res[...,[0]]/(res[...,[0]] + t["k_n"]),
                        res[...,[1]]/(res[...,[1]] + t["k_p"]),
                        light_growth(N_phyto, t, env)])
@@ -28,6 +32,7 @@ def grazing(N_phyto,t):
     return numerator/np.expand_dims(denom,-1)
 
 def per_cap_plankton_growth(N, t, env):
+    # per capita growth rate of all plankton species    
     
     N = N.copy()
     N[~(1e-8<N)] = 1e-8 # species with too small densities cause numerical problems
@@ -43,6 +48,12 @@ def per_cap_plankton_growth(N, t, env):
     
     # growth rate of phytoplankton
     growth_P = phyto_growth(res, N_phyto, t, env)
+    # adjust growth for temperature
+    temp_factor = np.exp(b_epp*(env["T"]-gp.T_ref))*(1-4*(env["T"]-t["T_opt"])**2/t["T_sig"]**2)
+    mort_factor = 0
+    #temp_factor = t["a_1"]*np.exp(t["a_2"]*env["T"])
+    #mort_factor = t["b_1"]*np.exp(t["b_2"]*env["T"])
+    growth_P = temp_factor*growth_P - mort_factor
     dP_dt = (growth_P
              - uc["h_day"]/uc["ml_L"]*np.einsum("...z,...zp->...p", N_zoo, grazed)
              - env["d"])
@@ -64,7 +75,7 @@ def convert_ode_to_log(logN, t, env, time = 0):
     env_c = {
         R: env[R]*(1 + env["ampl_"+R]
         *np.sin(2*np.pi*time/env["freq_"+R] + env["phase_"+R])) 
-        for R in ["N", "P", "I_in", "d", "zm"]}
+        for R in ["N", "P", "I_in", "d", "zm", "T"]}
     
     with warnings.catch_warnings(record = True):
         N = np.exp(logN)

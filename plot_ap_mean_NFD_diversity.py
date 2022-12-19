@@ -86,6 +86,8 @@ for i,a in enumerate(ax.flatten()):
     a.set_xticklabels(3*[""])
     a.set_title(ABC[i], loc = "left")
     a.axvline(change_trait[len(change_trait)//2], color = "k")
+ax[2,2].set_title("H", loc = "left")
+ax[2,1].set_title("G", loc = "left")
     
 for a in ax[[1,2,2], np.arange(3)]:
     a.set_xticklabels([-1,0,1])

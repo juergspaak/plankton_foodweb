@@ -4,7 +4,9 @@ import warnings
 import zoop_traits as zt
 uc = zt.uc
 import phytoplankton_traits as pt
+import temp_traits as tt
 
+#from fit_temperature_traits import generate_temp_traits as gtt
 """
 traits and their meaning
 
@@ -45,13 +47,13 @@ s_zp: seectivity/preference of eating phytoplankton p by zooplankton z [1]
 # data taken from branco et al 2020, DOI: 10.1086/706251
 # divided by three because they report 
 sig_size = np.sqrt(0.25)
-
+T_ref = 20.0
 env = {"I_in": 100,
        "P": 50,
        "N": 250,
        "d": 0.1,
        "zm": 10,
-       "temp": 25}
+       "temp": T_ref}
 
 def generate_env(n_coms, I_in = [50,200], P = [5,20], N = [10,100],
                  d = [0.05,0.2], zm = [10,100], temp = [15,25],
@@ -60,8 +62,10 @@ def generate_env(n_coms, I_in = [50,200], P = [5,20], N = [10,100],
                    "P": np.random.uniform(*P, (n_coms)),
                    "N": np.random.uniform(*N, (n_coms)),
                    "d": np.random.uniform(*d, (n_coms)),
-                   "zm": np.random.uniform(*zm, (n_coms))}
-    for key in ["N", "P", "I_in", "zm", "d", "temp"]:
+                   "zm": np.random.uniform(*zm, (n_coms)),
+                   "T": np.random.uniform(*temp, (n_coms))}
+    
+    for key in ["N", "P", "I_in", "zm", "d", "T"]:
         if key in fluct_env:
             env["freq_" + key] = np.random.uniform(1,100, (n_coms))
             env["phase_" + key] = np.random.uniform(0, 2*np.pi, n_coms)
@@ -70,9 +74,18 @@ def generate_env(n_coms, I_in = [50,200], P = [5,20], N = [10,100],
             env["freq_" + key] = np.ones(n_coms)
             env["phase_" + key] = np.zeros(n_coms)
             env["ampl_" + key] = np.zeros(n_coms)
-
+            
+    # for backwards consistency set to constant temperature
+    if not "T" in fluct_env:
+        env["T"][:] = T_ref
     return env
     
+def generate_temperature_traits(traits):
+    traits["T_opt"] = np.random.normal(*tt.temp_normal["T_opt"].values,
+                                         traits["mu_P"].shape)
+    traits["T_sig"] = np.random.normal(*tt.temp_normal["T_sig"].values,
+                                         traits["mu_P"].shape)
+    return traits
     
 
 def generate_base_traits(r_spec = 1, n_com = 100, std = None, diff_std = {},
@@ -129,7 +142,6 @@ def generate_base_traits(r_spec = 1, n_com = 100, std = None, diff_std = {},
     # generate conditional distribution given size
     mu_cond = mean[:,1:] + cov[1:,0]/cov[0,0]*(size - mean[0,0])
     cov_cond = cov[1:,1:] - cov[1:,[0]].dot(1/cov[0,0]*cov[[0],1:])
-    
     traits = mu_cond + np.random.multivariate_normal(np.zeros(len(cov[1:])),
                                                      cov_cond, size.shape[:-1])
     traits = np.exp(traits)
@@ -142,7 +154,8 @@ def generate_base_traits(r_spec = 1, n_com = 100, std = None, diff_std = {},
 
 def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
                       size_P = None, diff_mean = {}, tradeoffs = {},
-                      size_Z = None, diff_std = {}, corr_phyto = None, corr_zoo = None):
+                      size_Z = None, diff_std = {}, corr_phyto = None,
+                      corr_zoo = None, fluct_temp = False):
     """ Generate traits of plankton communities
     
     Parameters:
@@ -163,7 +176,6 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
         size_Z = np.log(traits_phyto["size_P"]*uc["mum3_mg"]*np.exp(zt.zoop_pref))
         # add noise
         size_Z = size_Z + np.random.normal(0, zt.sig_size_noise, size_Z.shape)
-
         traits_zoop = generate_base_traits(r_phyto, n_coms, phyto = False,
                                            size = size_Z, diff_std = diff_std,
                                            tradeoffs = tradeoffs, corr = corr_zoo,
@@ -225,6 +237,22 @@ def generate_plankton(r_phyto, n_coms, r_zoop = None, evolved_zoop = True,
                                                    axis = -1, keepdims=True)
         
         traits["s_zp"][np.isnan(traits["s_zp"])] = 0   
+        
+    # add temperature traits
+    if fluct_temp:
+        traits = generate_temperature_traits(traits)
+        a_1, a_2, b_1, b_2 = gtt(traits["mu_P"])
+        traits["a_1"] = a_1
+        traits["a_2"] = a_2
+        traits["b_1"] = b_1
+        traits["b_2"] = b_2
+    else:
+        traits["T_opt"] = np.full(traits["mu_P"].shape, T_ref)
+        traits["T_sig"] = np.ones(traits["mu_P"].shape)
+        traits["a_1"] = np.ones(traits["mu_P"].shape)
+        traits["a_2"] = np.ones(traits["mu_P"].shape)
+        traits["b_1"] = np.ones(traits["mu_P"].shape)
+        traits["b_2"] = np.ones(traits["mu_P"].shape)
 
     return traits
 
@@ -326,13 +354,16 @@ def select_present(traits, ind_phyto = None, ind_zoo = None):
         traits_select[key] = traits[key][...,ind_phyto]
     for key in zt.zoop_traits:
         traits_select[key] = traits[key][...,ind_zoo]
-    
+    for key in ["T_sig", "T_opt"]:
+        traits_select[key] = traits[key][...,ind_phyto]
+
     # combined traits
     for key in ["h_zp", "s_zp"]:
         traits_select[key] = traits[key][..., ind_zoo,:]
         traits_select[key] = traits_select[key][...,ind_phyto]
     
     return traits_select
+
 
 if __name__ == "__main__":
     # show distribution of combined traits h_zp and s_zp

@@ -13,7 +13,7 @@ def fun(x, A, tri, trj):
 
 n_prec = 9
 
-n_coms = 1000
+n_coms = 100
 
 gleaner = ["c_Z:m_Z", "c_Z:k_Z", "c_Z:mu_Z", "c_n:k_n", "c_p:k_p"]
 defense = ["R_P:mu_P", "R_P:k_n"]

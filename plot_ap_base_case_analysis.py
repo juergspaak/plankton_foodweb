@@ -45,15 +45,16 @@ tr_surv_zoo = np.log(tr_surv_zoo)
 # plot changes in mean and variance of each trait
 diff_mean_phyto = (np.mean(tr_surv_phyto, axis = -1) - gp.pt.mean_phyto)/gp.pt.std_phyto**2
 diff_var_phyto = (np.std(tr_surv_phyto, axis = -1) - gp.pt.std_phyto)/gp.pt.std_phyto
-ax[0,1].plot(diff_mean_phyto, diff_var_phyto, 'r.')
+ax[0,1].plot(diff_mean_phyto.values, diff_var_phyto.values, 'r.')
 for key in diff_mean_phyto.columns:
-    ax[0,1].text(diff_mean_phyto[key], diff_var_phyto[key], key)
+    ax[0,1].text(diff_mean_phyto[key].values,
+                 diff_var_phyto[key].values, key)
 
 diff_mean_zoo = (np.mean(tr_surv_zoo, axis = -1) - gp.zt.mean_zoop)/gp.zt.std_zoop**2
 diff_var_zoo = (np.std(tr_surv_zoo, axis = -1) - gp.zt.std_zoop)/gp.zt.std_zoop
-ax[0,1].plot(diff_mean_zoo, diff_var_zoo, 'b.')
+ax[0,1].plot(diff_mean_zoo.values, diff_var_zoo.values, 'b.')
 for key in diff_mean_zoo.columns:
-    ax[0,1].text(diff_mean_zoo[key], diff_var_zoo[key], key)
+    ax[0,1].text(diff_mean_zoo[key].values, diff_var_zoo[key].values, key)
     
 ax[0,1].set_xlabel("Change in mean trait value")
 ax[0,1].set_ylabel("Change in variance trait value")
@@ -102,7 +103,7 @@ for i,a in enumerate(ax.flatten()):
 fig.tight_layout()
 
 # print results
-print("Resilts")
+print("Results")
 df = pd.DataFrame(np.nan, index = ["Phyto", "Zoo"],
                   columns = ["min", "max", "mean", "median", "percent higher"])
 df["min"] = np.nanpercentile(richness, .5, axis = 0)
